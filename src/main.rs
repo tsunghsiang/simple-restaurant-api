@@ -1,28 +1,5 @@
-use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Serialize, Deserialize)]
-struct ItemPair {
-    name: String,
-    amount: i32,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct PlaceOrder {
-    table_id: String,
-    items: Vec<ItemPair>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct DeleteOrder {
-    table_id: String,
-    item: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct UpdateOrder {
-    table_id: String,
-    items: Vec<ItemPair>,
-}
+mod order_type;
+use order_type::*;
 
 #[async_std::main]
 async fn main() -> tide::Result<()>{
