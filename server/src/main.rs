@@ -1,33 +1,11 @@
 mod order_type;
-mod tablet;
-mod staff;
 
 use order_type::PlaceOrder;
 use order_type::DeleteOrder;
 use order_type::UpdateOrder;
-use tablet::Tablet;
-use staff::Staff;
 use reqwest::Client;
 use std::thread;
 use std::time::Duration;
-/*
-fn main() {
-    // Start an operator to receive requests
-    thread::spawn(move || {
-        lb();
-        loop{};
-    }).join();
-    
-    thread::sleep(Duration::from_millis(2000));
-    // Start staffs to serve customers
-    for i in (1..11) {
-        let staff: Staff = Staff::new(i.to_string(), Client::new());
-        staff.work();
-        thread::sleep(Duration::from_millis(100));    
-    }
-    loop{};
-}*/
-
 
 #[async_std::main]
 async fn main() -> tide::Result<()>{
