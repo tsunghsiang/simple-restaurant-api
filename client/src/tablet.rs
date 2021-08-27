@@ -1,11 +1,16 @@
 use crate::order_type::ItemPair;
+use async_trait::async_trait;
+use reqwest::Client;
+use reqwest::Error;
 
+#[async_trait]
 pub trait Tablet {
     fn get_table_id(&self) -> String;
-    fn work(&self);
-    fn place_order(&self, table_id: String, items: Vec<ItemPair>);
-    fn delete_order(&self, table_id: String, item: String);
-    fn update_order(&self, table_id: String, items: Vec<ItemPair>);
-    fn status_order_all(&self, table_id: String);
-    fn status_order_item(&self, table_id: String, item: String);
+    fn get_inst(&self) -> Client;
+    fn work(self);
+    async fn place_order(&self, table_id: String, items: Vec<ItemPair>);
+    async fn delete_order(&self, table_id: String, item: String);
+    async fn update_order(&self, table_id: String, items: Vec<ItemPair>);
+    async fn status_order_all(&self, table_id: String) -> Result<(), Error>;
+    async fn status_order_item(&self, table_id: String, item: String) -> Result<(), Error>;
 }
