@@ -35,19 +35,16 @@ async fn query_by_tableid_and_item(req: tide::Request<()>) -> tide::Result {
 }
 
 async fn add_by_tableid_and_item(mut req: tide::Request<()>) -> tide::Result {
-    let PlaceOrder { table_id, items } = req.body_json().await?;
-    let res = format!("[PLACE] table id: {}, Order Nums: {}", table_id, items.len());
-    Ok(res.into())
+    let order: PlaceOrder = req.body_json().await?;
+    Ok(order.disp().into())
 }
 
 async fn remove_by_tableid_and_item(mut req: tide::Request<()>) -> tide::Result {
-    let DeleteOrder { table_id, item } = req.body_json().await?;
-    let res = format!("[DELETE] table id: {}, item: {}", table_id, item);
-    Ok(res.into())
+    let order: DeleteOrder = req.body_json().await?;
+    Ok(order.disp().into())
 }
 
 async fn update_by_tableid_and_item(mut req: tide::Request<()>) -> tide::Result {
-    let UpdateOrder { table_id, items } = req.body_json().await?;
-    let res = format!("[Update] table id: {}, Update Nums: {}", table_id, items.len());
-    Ok(res.into())
+    let order: UpdateOrder = req.body_json().await?;
+    Ok(order.disp().into())
 }

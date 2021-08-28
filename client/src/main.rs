@@ -15,7 +15,7 @@ async fn main() {
     let args: Vec<String> = env::args().collect();
 
     if args.len() < 2 {
-        panic!("[ERR] Please specify number of staffs: cargo run --bin client {#}, {#} should be a positive integer");
+        panic!("[ERR] Please specify number of staffs: cargo run --bin client [num], [num] should be a positive integer");
     }
 
     let nums = (&args[1]).parse().unwrap();
