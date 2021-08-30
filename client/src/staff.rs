@@ -80,6 +80,7 @@ impl Tablet for Staff {
     async fn place_order(&self, table_id: String, items: Vec<ItemPair>) -> Result<(), Error> {
         let id = table_id.clone();
         let order: PlaceOrder = PlaceOrder {
+            timestamp: timestamp(),
             table_id: table_id,
             items: items,
         };
@@ -97,6 +98,7 @@ impl Tablet for Staff {
     async fn delete_order(&self, table_id: String, item: String) -> Result<(), Error>{
         let id = table_id.clone();
         let order: DeleteOrder = DeleteOrder {
+            timestamp: timestamp(),
             table_id: table_id,
             item: item,
         };
@@ -114,6 +116,7 @@ impl Tablet for Staff {
     async fn update_order(&self, table_id: String, items: Vec<ItemPair>) -> Result<(), Error> {
         let id = table_id.clone();
         let order: UpdateOrder = UpdateOrder {
+            timestamp: timestamp(),
             table_id: table_id,
             items: items,
         };
@@ -195,4 +198,10 @@ fn generate_items() -> Vec<ItemPair> {
         });
     }
     items
+}
+
+fn timestamp() -> u64 {
+    let timespec = time::get_time();
+    let mills: u64 = (timespec.sec as u64 * 1000) + (timespec.nsec as u64 / 1000 / 1000);
+    mills
 }

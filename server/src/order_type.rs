@@ -20,18 +20,21 @@ pub struct ItemPair {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PlaceOrder {
+    pub timestamp: u64,
     pub table_id: String,
     pub items: Vec<ItemPair>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DeleteOrder {
+    pub timestamp: u64,
     pub table_id: String,
     pub item: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateOrder {
+    pub timestamp: u64,
     pub table_id: String,
     pub items: Vec<ItemPair>,
 }
@@ -39,7 +42,9 @@ pub struct UpdateOrder {
 impl PlaceOrder {
     pub fn disp(&self) -> String {
         let mut res = "".to_owned();
-        res.push_str("{ table_id:");
+        res.push_str("{ timestamp:");
+        res.push_str(&self.timestamp.to_string());
+        res.push_str(", table_id:");
         res.push_str(&self.table_id);
         res.push_str(", items:[ ");
         for i in 0..self.items.len() {
@@ -59,7 +64,9 @@ impl PlaceOrder {
 impl UpdateOrder {
     pub fn disp(&self) -> String {
         let mut res = "".to_owned();
-        res.push_str("{ table_id:");
+        res.push_str("{ timestamp:");
+        res.push_str(&self.timestamp.to_string());
+        res.push_str(", table_id:");
         res.push_str(&self.table_id);
         res.push_str(", items:[ ");
         for i in 0..self.items.len() {
@@ -79,7 +86,9 @@ impl UpdateOrder {
 impl DeleteOrder {
     pub fn disp(&self) -> String {
         let mut res = "".to_owned();
-        res.push_str("{ table_id:");
+        res.push_str("{ timestamp:");
+        res.push_str(&self.timestamp.to_string());
+        res.push_str(", table_id:");
         res.push_str(&self.table_id);
         res.push_str(", items: ");
         res.push_str(&self.item);

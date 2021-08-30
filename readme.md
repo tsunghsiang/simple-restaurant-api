@@ -3,6 +3,7 @@ curl -X GET -H "Content-Type:application/json" localhost:8080/api/status/order/{
 
 Response:
 {
+	"timestamp": "xxxxxxxxxxxxx",
 	"table_id": "4",
 	"item": "B",
 	"status": "?"
@@ -13,6 +14,7 @@ curl -X GET -H "Content-Type:application/json" localhost:8080/api/status/order/{
 
 Response:
 {
+	"timestamp": "xxxxxxxxxxxxx",
 	"table_id": "3",
 	"items": [
 		{ "item": "A", "amount": "2", "status": "?" },
@@ -25,10 +27,11 @@ Response:
 }
 
 POST
-curl -X POST -H "Content-Type:application/json" localhost:8080/api/place/order -d "{\"table_id\":\"4\",\"items\": [{\"name\":\"A\", \"amount\":1}, {\"name\":\"B\", \"amount\":3}]}"
+curl -X POST -H "Content-Type:application/json" localhost:8080/api/place/order -d "{\"timestamp\":123,\"table_id\":\"4\",\"items\": [{\"name\":\"A\", \"amount\":1}, {\"name\":\"B\", \"amount\":3}]}"
 
 Request:
 {
+	"timestamp": "xxxxxxxxxxxx",
 	"table_id":"4",
 	"items": [
 		{"name":"A", "amount":"1"}
@@ -36,6 +39,7 @@ Request:
 }
 
 {
+	"timestamp": "xxxxxxxxxxxx",
 	"table_id":"4",
 	"items": [
 		{"name":"A", "amount":"1"},
@@ -44,6 +48,7 @@ i		{"name":"B", "amount":"3"}
 }
 
 Response: {
+	"timestamp": "xxxxxxxxxxxxx",
 	"table_id": "6",
 	"items": [
 		{"name":"F", amount: "4", "status": "?"}
@@ -54,9 +59,10 @@ Response: {
 }
 
 DELETE
-curl -X DELETE -H "Content-Type:application/json" localhost:8080/api/delete/order -d "{\"table_id\": \"4\", \"item\": \"D\"}"
+curl -X DELETE -H "Content-Type:application/json" localhost:8080/api/delete/order -d "{\"timestamp\": 123,\"table_id\": \"4\", \"item\": \"D\"}"
 
 Response: {
+	"timestamp": "xxxxxxxxxxxxx",
 	"table_id": "6",
 	"items": [
 		{"name":"F", amount: "0", "status": "?"}
@@ -64,9 +70,10 @@ Response: {
 }
 
 PUT
-curl -X PUT -H "Content-Type:application/json" localhost:8080/api/update/order -d "{\"table_id\":\"4\",\"items\": [{\"name\":\"A\", \"amount\":1}, {\"name\":\"B\", \"amount\":3}]}"
+curl -X PUT -H "Content-Type:application/json" localhost:8080/api/update/order -d "{\"timestamp\":123,\"table_id\":\"4\",\"items\": [{\"name\":\"A\", \"amount\":1}, {\"name\":\"B\", \"amount\":3}]}"
 
 Response: {
+	"timestamp": "xxxxxxxxxxxxxx",
 	"table_id": "6",
 	"items": [
 		{"name":"F", amount: "4", "status": "?"}
@@ -98,16 +105,16 @@ DB Table Schema:
 (
 	timestamp LONG,
 	table_id INT,
-	table_status		// None, Pending, Processing
+	table_status		// todo, doing, done
 )
 
 DB Items Schema:
 (
-	timestamp LONG
+	timestamp LONG,
 	table_id INT,
 	item String,
 	amount INT,
-	item_status Enum,	// None, Pending, Processing
+	item_status Enum,	// todo, doing, done
 	cook_time INT
 )
 
