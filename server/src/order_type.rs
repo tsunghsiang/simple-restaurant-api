@@ -20,21 +20,21 @@ pub struct ItemPair {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PlaceOrder {
-    pub timestamp: u64,
+    pub timestamp: i64,
     pub table_id: String,
     pub items: Vec<ItemPair>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DeleteOrder {
-    pub timestamp: u64,
+    pub timestamp: i64,
     pub table_id: String,
     pub item: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateOrder {
-    pub timestamp: u64,
+    pub timestamp: i64,
     pub table_id: String,
     pub items: Vec<ItemPair>,
 }

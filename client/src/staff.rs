@@ -200,8 +200,8 @@ fn generate_items() -> Vec<ItemPair> {
     items
 }
 
-fn timestamp() -> u64 {
+fn timestamp() -> i64 {
     let timespec = time::get_time();
-    let mills: u64 = (timespec.sec as u64 * 1000) + (timespec.nsec as u64 / 1000 / 1000);
+    let mills: i64 = (timespec.sec as i64 * 1000) + (timespec.nsec as i64 / 1000 / 1000);
     mills
 }

@@ -105,7 +105,7 @@ DB Table Schema:
 (
 	timestamp LONG,
 	table_id INT,
-	table_status		// todo, doing, done
+	table_status TEXT		// todo, doing, done
 )
 
 DB Items Schema:
@@ -114,8 +114,10 @@ DB Items Schema:
 	table_id INT,
 	item String,
 	amount INT,
-	item_status Enum,	// todo, doing, done
+	item_status TEXT,	// todo, doing, done
 	cook_time INT
 )
 
 Table <------>*Items
+
+sqlite issue: https://blog.itdevwu.com/post/915/
