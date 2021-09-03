@@ -1,14 +1,28 @@
 mod order_type;
+mod db;
+mod cmd;
 
 use order_type::PlaceOrder;
 use order_type::DeleteOrder;
 use order_type::UpdateOrder;
+use db::DB;
+use cmd::Dbio;
 
 #[async_std::main]
 async fn main() -> tide::Result<()>{
     tide::log::start();
     let mut server = tide::new();
- 
+    let mut command: Dbio = Dbio::new();
+    
+    /* Check DB status first */
+    match command.init() {
+        Ok(()) => println!("[SERVER] DB status OK"),
+        Err(err) => {
+            println!("[SERVER] DB Error: {}", err);
+            ()
+        }
+    }
+
     /* simple api processing here */
     server.at("/api/status/order/:tableid").get(query_by_tableid);
     server.at("/api/status/order/:tableid/:item").get(query_by_tableid_and_item);
@@ -22,16 +36,30 @@ async fn main() -> tide::Result<()>{
 
 async fn query_by_tableid(req: tide::Request<()>) -> tide::Result {
     let mut collection = req.url().as_str().split('/');
+    let mut command: Dbio = Dbio::new();
+    let mut res: String = "".to_string();
     let table_id = collection.nth_back(0).unwrap();
-    let res = format!("[QUERY] table id: {}", table_id);
+
+    match command.query_by_tableid(table_id.to_string()) {
+        Ok(result) => res = result,
+        _ => {}
+    };
+
     Ok(res.into())
 }
 
 async fn query_by_tableid_and_item(req: tide::Request<()>) -> tide::Result {
     let mut collection = req.url().as_str().split('/');
+    let mut command: Dbio = Dbio::new();
+    let mut res: String = "".to_string();
     let item = collection.nth_back(0).unwrap();
-    let table_id = collection.nth_back(1).unwrap();
-    let res = format!("[QUERY] table id: {}, item: {}", table_id, item);
+    let table_id = collection.nth_back(0).unwrap();
+
+    match command.query_by_tableid_and_item(table_id.to_string(), item.to_string()) {
+        Ok(result) => res = result,
+        _ => {}
+    };
+
     Ok(res.into())
 }
 
