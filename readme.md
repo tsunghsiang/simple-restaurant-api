@@ -12,14 +12,18 @@ The project is developed for the [interview problem](https://github.com/paidy/in
 | Update a request: for a created request not fully served, a staff is able to update amounts of specified items and add new items on the same order, but served items are not updated | PATCH  |      Y      |         /api/update/order         |
 
 ```table_id```: The identifier of a table, which is unique.
+
 ```item```: The name of the food. In our scenario, it is limited to upper-case alphabets: **(A, B, C, ... , X, Y, Z)**.
+
 ```Base URL```: localhost:8080
 
 ## Basic Testing Samples
 Usually, you can test on your own by [curl](https://linux.die.net/man/1/curl) command
 1. Get all items of a specified table number.
-```curl -X GET -H "Content-Type:application/json" localhost:8080/api/status/order/3```
-Response JSON Format:
+   
+   ```curl -X GET -H "Content-Type:application/json" localhost:8080/api/status/order/3```
+   
+   Response JSON Format:
     ```json
     {
     	"timestamp": 1630726854764,
@@ -32,9 +36,11 @@ Response JSON Format:
     	]
     }
     ```
-2. Get status of a specified item of a specified table number.
-```curl -X GET -H "Content-Type:application/json" localhost:8080/api/status/order/3/Z```
-Response JSON Format:
+1. Get status of a specified item of a specified table number.
+   
+   ```curl -X GET -H "Content-Type:application/json" localhost:8080/api/status/order/3/Z```
+   
+   Response JSON Format:
     ```json
     {
     	"timestamp": 1630726854764,
