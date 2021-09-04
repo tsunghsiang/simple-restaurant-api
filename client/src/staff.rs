@@ -1,14 +1,14 @@
+use crate::order_type::{DeleteOrder, ItemPair, PlaceOrder, ReqType, UpdateOrder};
 use crate::tablet::Tablet;
-use crate::order_type::{ReqType, ItemPair, PlaceOrder, DeleteOrder, UpdateOrder};
+use async_trait::async_trait;
+use rand::Rng;
 use reqwest::Client;
 use reqwest::Error;
-use std::thread;
-use std::vec::Vec;
-use std::time::Duration;
-use rand::Rng;
-use async_trait::async_trait;
-use tokio::runtime::Runtime;
 use std::convert::TryFrom;
+use std::thread;
+use std::time::Duration;
+use std::vec::Vec;
+use tokio::runtime::Runtime;
 
 pub struct Staff {
     table_id: String,
@@ -16,17 +16,16 @@ pub struct Staff {
 }
 
 impl Staff {
-    pub fn new(table_id: String, inst: Client) -> Staff{
-        Staff{
+    pub fn new(table_id: String, inst: Client) -> Staff {
+        Staff {
             table_id: table_id,
-            inst: inst
+            inst: inst,
         }
     }
 }
 
 #[async_trait]
 impl Tablet for Staff {
-    
     fn get_table_id(&self) -> String {
         self.table_id.clone()
     }
@@ -34,10 +33,9 @@ impl Tablet for Staff {
     fn get_inst(&self) -> Client {
         self.inst.clone()
     }
-    
     fn work(self) {
         let runtime = Runtime::new().unwrap();
-        loop { 
+        loop {
             // random number generator
             let mut rng = rand::thread_rng();
             let duration = rng.gen_range(1..2);
@@ -46,30 +44,31 @@ impl Tablet for Staff {
             match ReqType::try_from(req_type) {
                 Ok(ReqType::Place) => {
                     runtime.block_on(async {
-                        self.place_order(self.get_table_id(), generate_items()).await
+                        self.place_order(self.get_table_id(), generate_items())
+                            .await
                     });
-                },
+                }
                 Ok(ReqType::Delete) => {
                     runtime.block_on(async {
                         let val: i8 = rng.gen_range(0..26);
                         self.delete_order(self.get_table_id(), get_item(val)).await
                     });
-                },
+                }
                 Ok(ReqType::Update) => {
                     runtime.block_on(async {
-                        self.update_order(self.get_table_id(), generate_items()).await
+                        self.update_order(self.get_table_id(), generate_items())
+                            .await
                     });
-                },
+                }
                 Ok(ReqType::StatusAll) => {
-                    runtime.block_on(async {
-                        self.status_order_all(self.get_table_id()).await
-                    });
-                },
+                    runtime.block_on(async { self.status_order_all(self.get_table_id()).await });
+                }
                 Ok(ReqType::StatusItem) => {
                     runtime.block_on(async {
                         let val: i8 = rng.gen_range(0..26);
-                        self.status_order_item(self.get_table_id(), get_item(val)).await
-                    });                   
+                        self.status_order_item(self.get_table_id(), get_item(val))
+                            .await
+                    });
                 }
                 _ => {}
             }
@@ -84,32 +83,34 @@ impl Tablet for Staff {
             table_id: table_id,
             items: items,
         };
-        println!("[STAFF-{}][PLACE][REQUEST] {}", id, order.disp()); 
-        let executor = Client::new();       
-        let resp = executor.post("http://127.0.0.1:8080/api/place/order")
-                           .json(&order)
-                           .send()
-                           .await?;
+        println!("[STAFF-{}][PLACE][REQUEST] {}", id, order.disp());
+        let executor = Client::new();
+        let resp = executor
+            .post("http://127.0.0.1:8080/api/place/order")
+            .json(&order)
+            .send()
+            .await?;
         let msg = resp.text().await?;
-        println!("[STAFF-{}][PLACE][RESPONSE] {:?}", id, msg); 
+        println!("[STAFF-{}][PLACE][RESPONSE] {:?}", id, msg);
         Ok(())
     }
 
-    async fn delete_order(&self, table_id: String, item: String) -> Result<(), Error>{
+    async fn delete_order(&self, table_id: String, item: String) -> Result<(), Error> {
         let id = table_id.clone();
         let order: DeleteOrder = DeleteOrder {
             timestamp: timestamp(),
             table_id: table_id,
             item: item,
         };
-        println!("[STAFF-{}][DELETE][REQUEST] {}", id, order.disp()); 
-        let executor = Client::new();       
-        let resp = executor.delete("http://127.0.0.1:8080/api/delete/order")
-                           .json(&order)
-                           .send()
-                           .await?;
+        println!("[STAFF-{}][DELETE][REQUEST] {}", id, order.disp());
+        let executor = Client::new();
+        let resp = executor
+            .delete("http://127.0.0.1:8080/api/delete/order")
+            .json(&order)
+            .send()
+            .await?;
         let msg = resp.text().await?;
-        println!("[STAFF-{}][DELETE][RESPONSE] {:?}", id, msg); 
+        println!("[STAFF-{}][DELETE][RESPONSE] {:?}", id, msg);
         Ok(())
     }
 
@@ -120,14 +121,15 @@ impl Tablet for Staff {
             table_id: table_id,
             items: items,
         };
-        println!("[STAFF-{}][UPDATE][REQUEST] {}", id, order.disp()); 
-        let executor = Client::new();       
-        let resp = executor.put("http://127.0.0.1:8080/api/update/order")
-                           .json(&order)
-                           .send()
-                           .await?;
+        println!("[STAFF-{}][UPDATE][REQUEST] {}", id, order.disp());
+        let executor = Client::new();
+        let resp = executor
+            .patch("http://127.0.0.1:8080/api/update/order")
+            .json(&order)
+            .send()
+            .await?;
         let msg = resp.text().await?.to_string();
-        println!("[STAFF-{}][UPDATE][RESPONSE] {:?}", id, msg); 
+        println!("[STAFF-{}][UPDATE][RESPONSE] {:?}", id, msg);
         Ok(())
     }
 
@@ -135,24 +137,25 @@ impl Tablet for Staff {
         let id = table_id.clone();
         let url: String = format!("http://127.0.0.1:8080/api/status/order/{}", table_id);
         println!("[STAFF-{}][STATUS_ALL][REQUEST] SENT! TABLE: {}", id, id);
-        let resp = reqwest::get(url).await?
-                                    .text()
-                                    .await?; 
+        let resp = reqwest::get(url).await?.text().await?;
         println!("[STAFF-{}][STATUS_ALL][RESPONSE] {:?}", id, resp);
-        Ok(()) 
+        Ok(())
     }
 
     async fn status_order_item(&self, table_id: String, item: String) -> Result<(), Error> {
         let (id, term) = (table_id.clone(), item.clone());
-        let url: String = format!("http://127.0.0.1:8080/api/status/order/{}/{}", table_id, item);
-        println!("[STAFF-{}][STATUS_ITEM][REQUEST] SENT! TABLE: {} CHECK ITEM: {}", id, id, term);
-        let resp = reqwest::get(url).await?
-                                    .text()
-                                    .await?;
+        let url: String = format!(
+            "http://127.0.0.1:8080/api/status/order/{}/{}",
+            table_id, item
+        );
+        println!(
+            "[STAFF-{}][STATUS_ITEM][REQUEST] SENT! TABLE: {} CHECK ITEM: {}",
+            id, id, term
+        );
+        let resp = reqwest::get(url).await?.text().await?;
         println!("[STAFF-{}][STATUS_ITEM][RESPONSE] {:?}", id, resp);
         Ok(())
     }
-
 }
 
 fn get_item(val: i8) -> String {
@@ -183,16 +186,17 @@ fn get_item(val: i8) -> String {
         23 => "X",
         24 => "Y",
         25 => "Z",
-        _ => "A"
-    }).to_string()
+        _ => "A",
+    })
+    .to_string()
 }
 
 fn generate_items() -> Vec<ItemPair> {
     let mut items = Vec::<ItemPair>::new();
     let mut rng = rand::thread_rng();
     let cnt = rng.gen_range(2..27);
-    for i in 0..(cnt-1) {
-        items.push(ItemPair{
+    for i in 0..(cnt - 1) {
+        items.push(ItemPair {
             name: get_item(i),
             amount: rng.gen_range(1..10),
         });

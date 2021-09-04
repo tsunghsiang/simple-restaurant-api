@@ -20,7 +20,7 @@ async fn main() -> tide::Result<()> {
             println!("[SERVER] DB Error: {}", err);
             ()
         }
-    }
+    };
 
     /* simple api processing here */
     server
@@ -35,7 +35,7 @@ async fn main() -> tide::Result<()> {
         .delete(remove_by_tableid_and_item);
     server
         .at("/api/update/order")
-        .put(update_by_tableid_and_item);
+        .patch(update_by_tableid_and_item);
     server.listen("127.0.0.1:8080").await?;
 
     Ok(())
