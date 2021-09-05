@@ -257,6 +257,23 @@ impl DB for Dbio {
         Ok(res.into())
     }
 
+    fn check_table_status(&self) -> Result<bool, Error> {
+        let mut client = Client::connect(self.get_db_path(), NoTls).unwrap();
+        let mut is_empty: bool = true;
+
+        for row in client.query("SELECT * FROM tablet WHERE table_status NOT IN ('done')", &[])? {
+            is_empty = false;
+            let table_id: String = row.get("table_id");
+            let table_status: String = row.get("table_status");
+            if table_status.eq("todo") {
+                println!("[CHECK_TABLE_STATUS] table_id: {} is still waiting, status: {}", table_id, table_status);
+            } else {
+                println!("[CHECK_TABLE_STATUS] table_id: {} is still cooking, status: {}", table_id, table_status);
+            }
+        }
+
+        Ok(is_empty)
+    }
 }
 
 fn timestamp() -> i64 {
@@ -357,7 +374,9 @@ fn update_item_status(timestamp: i64, table_id: String, item: String, to: String
     match client.execute("UPDATE items
                           SET item_status = $1
                           WHERE timestamp = $2 AND table_id = $3 AND item = $4", &[&to, &timestamp, &table_id, &item]) {
-        Ok(_n) => println!("[UPDATE_ITEM_STATUS] table_id: {}, item: {}, status: {}", table_id, item, to),
+        // Ok(_n) => println!("[UPDATE_ITEM_STATUS] table_id: {}, item: {}, status: {}", table_id, item, to),
+        // Err(err) => println!("[UPDATE_ITEM_STATUS] Cook Error: {}", err)
+        Ok(_) => {},
         Err(err) => println!("[UPDATE_ITEM_STATUS] Cook Error: {}", err)
     };
     

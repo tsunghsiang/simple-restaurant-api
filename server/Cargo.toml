@@ -19,3 +19,5 @@ time = "0.1"
 postgres = "0.19.1"
 postgres-types = "0.2.1"
 futures = "0.3.17"
+ctrlc = { version = "3.0", features = ["termination"] }
+lazy_static = "1.4.0"
