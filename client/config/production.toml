@@ -1,0 +1,8 @@
+[client]
+base_url = "http://127.0.0.1:8080"
+
+[api]
+place_order = "/api/place/order"
+delete_order = "/api/delete/order"
+update_order = "/api/update/order"
+status_order = "/api/status/order"

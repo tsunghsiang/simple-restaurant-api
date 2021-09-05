@@ -1,6 +1,7 @@
 mod cmd;
 mod db;
 mod order_type;
+mod settings;
 
 use cmd::Dbio;
 use ctrlc;
@@ -9,6 +10,7 @@ use lazy_static::lazy_static;
 use order_type::DeleteOrder;
 use order_type::PlaceOrder;
 use order_type::UpdateOrder;
+use settings::Settings;
 use std::process;
 use std::sync::Mutex;
 use std::{thread, time};
@@ -42,10 +44,10 @@ async fn main() -> tide::Result<()> {
 
     /* Check DB status first */
     match command.init() {
-        Ok(()) => println!("[SERVER] DB status OK"),
+        Ok(()) => println!("[DATABASE] DB status OK"),
         Err(err) => {
-            println!("[SERVER] DB Error: {}", err);
-            ()
+            println!("[DATBASE] DB Error: {}", err);
+            panic!("[DATABASE] Please check db connection status.");
         }
     };
 
@@ -66,7 +68,7 @@ async fn main() -> tide::Result<()> {
     server
         .at("/api/update/order")
         .patch(update_by_tableid_and_item);
-    server.listen("127.0.0.1:8080").await?;
+    server.listen(Settings::get_srv_url()).await?;
 
     Ok(())
 }
@@ -180,6 +182,6 @@ async fn update_by_tableid_and_item(mut req: tide::Request<()>) -> tide::Result 
         };
         Ok(res.into())
     } else {
-        Ok("Server Closed. No more services".into())
+        Ok("Server is Closing. No More Services".into())
     }
 }

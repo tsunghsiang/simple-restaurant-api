@@ -5,6 +5,7 @@ use std::thread;
 use postgres::{Client, NoTls, Error};
 use rand::Rng;
 use futures::executor::block_on;
+use crate::settings::Settings;
 
 pub struct Dbio {
     name: String,
@@ -13,7 +14,7 @@ pub struct Dbio {
 impl Dbio {
     pub fn new() -> Dbio {
         Dbio {
-            name: "postgresql://postgres:nctusrs0915904265@localhost:5432/restaurant".to_string()
+            name: Settings::get_db_url()
         }
     }
 

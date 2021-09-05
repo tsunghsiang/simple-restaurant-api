@@ -1,5 +1,7 @@
 use crate::order_type::{DeleteOrder, ItemPair, PlaceOrder, ReqType, UpdateOrder};
+use crate::settings::Settings;
 use crate::tablet::Tablet;
+
 use async_trait::async_trait;
 use rand::Rng;
 use reqwest::Client;
@@ -12,15 +14,11 @@ use tokio::runtime::Runtime;
 
 pub struct Staff {
     table_id: String,
-    inst: Client,
 }
 
 impl Staff {
-    pub fn new(table_id: String, inst: Client) -> Staff {
-        Staff {
-            table_id: table_id,
-            inst: inst,
-        }
+    pub fn new(table_id: String) -> Staff {
+        Staff { table_id: table_id }
     }
 }
 
@@ -30,9 +28,6 @@ impl Tablet for Staff {
         self.table_id.clone()
     }
 
-    fn get_inst(&self) -> Client {
-        self.inst.clone()
-    }
     fn work(self) {
         let runtime = Runtime::new().unwrap();
         loop {
@@ -83,13 +78,14 @@ impl Tablet for Staff {
             table_id: table_id,
             items: items,
         };
+
+        let mut url: String = "".to_string();
+        url.push_str(&Settings::get_base_url());
+        url.push_str(&Settings::get_place_order_api());
+
         println!("[STAFF-{}][PLACE][REQUEST] {}", id, order.disp());
         let executor = Client::new();
-        let resp = executor
-            .post("http://127.0.0.1:8080/api/place/order")
-            .json(&order)
-            .send()
-            .await?;
+        let resp = executor.post(url).json(&order).send().await?;
         let msg = resp.text().await?;
         println!("[STAFF-{}][PLACE][RESPONSE] {:?}", id, msg);
         Ok(())
@@ -102,13 +98,14 @@ impl Tablet for Staff {
             table_id: table_id,
             item: item,
         };
+
+        let mut url: String = "".to_string();
+        url.push_str(&Settings::get_base_url());
+        url.push_str(&Settings::get_delete_order_api());
+
         println!("[STAFF-{}][DELETE][REQUEST] {}", id, order.disp());
         let executor = Client::new();
-        let resp = executor
-            .delete("http://127.0.0.1:8080/api/delete/order")
-            .json(&order)
-            .send()
-            .await?;
+        let resp = executor.delete(url).json(&order).send().await?;
         let msg = resp.text().await?;
         println!("[STAFF-{}][DELETE][RESPONSE] {:?}", id, msg);
         Ok(())
@@ -121,13 +118,14 @@ impl Tablet for Staff {
             table_id: table_id,
             items: items,
         };
+
+        let mut url: String = "".to_string();
+        url.push_str(&Settings::get_base_url());
+        url.push_str(&Settings::get_update_order_api());
+
         println!("[STAFF-{}][UPDATE][REQUEST] {}", id, order.disp());
         let executor = Client::new();
-        let resp = executor
-            .patch("http://127.0.0.1:8080/api/update/order")
-            .json(&order)
-            .send()
-            .await?;
+        let resp = executor.patch(url).json(&order).send().await?;
         let msg = resp.text().await?.to_string();
         println!("[STAFF-{}][UPDATE][RESPONSE] {:?}", id, msg);
         Ok(())
@@ -135,7 +133,11 @@ impl Tablet for Staff {
 
     async fn status_order_all(&self, table_id: String) -> Result<(), Error> {
         let id = table_id.clone();
-        let url: String = format!("http://127.0.0.1:8080/api/status/order/{}", table_id);
+        let mut url: String = "".to_string();
+        url.push_str(&Settings::get_base_url());
+        url.push_str(&Settings::get_status_order_api());
+        url.push_str("/");
+        url.push_str(&table_id);
         println!("[STAFF-{}][STATUS_ALL][REQUEST] SENT! TABLE: {}", id, id);
         let resp = reqwest::get(url).await?.text().await?;
         println!("[STAFF-{}][STATUS_ALL][RESPONSE] {:?}", id, resp);
@@ -143,17 +145,20 @@ impl Tablet for Staff {
     }
 
     async fn status_order_item(&self, table_id: String, item: String) -> Result<(), Error> {
-        let (id, term) = (table_id.clone(), item.clone());
-        let url: String = format!(
-            "http://127.0.0.1:8080/api/status/order/{}/{}",
-            table_id, item
-        );
+        let mut url: String = "".to_string();
+        url.push_str(&Settings::get_base_url());
+        url.push_str(&Settings::get_status_order_api());
+        url.push_str("/");
+        url.push_str(&table_id);
+        url.push_str("/");
+        url.push_str(&item);
+
         println!(
             "[STAFF-{}][STATUS_ITEM][REQUEST] SENT! TABLE: {} CHECK ITEM: {}",
-            id, id, term
+            table_id, table_id, item
         );
         let resp = reqwest::get(url).await?.text().await?;
-        println!("[STAFF-{}][STATUS_ITEM][RESPONSE] {:?}", id, resp);
+        println!("[STAFF-{}][STATUS_ITEM][RESPONSE] {:?}", table_id, resp);
         Ok(())
     }
 }
