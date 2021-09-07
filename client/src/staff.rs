@@ -1,5 +1,5 @@
 use crate::order_type::{DeleteOrder, ItemPair, PlaceOrder, ReqType, UpdateOrder};
-use crate::settings::Settings;
+use crate::settings::{Auth, Settings};
 use crate::tablet::Tablet;
 
 use async_trait::async_trait;
@@ -14,11 +14,15 @@ use tokio::runtime::Runtime;
 
 pub struct Staff {
     table_id: String,
+    auth: Auth,
 }
 
 impl Staff {
-    pub fn new(table_id: String) -> Staff {
-        Staff { table_id: table_id }
+    pub fn new(table_id: String, auth: Auth) -> Staff {
+        Staff {
+            table_id: table_id,
+            auth: auth,
+        }
     }
 }
 
@@ -85,7 +89,13 @@ impl Tablet for Staff {
 
         println!("[STAFF-{}][PLACE][REQUEST] {}", id, order.disp());
         let executor = Client::new();
-        let resp = executor.post(url).json(&order).send().await?;
+        let resp = executor
+            .post(url)
+            .header("X-Auth-Username", self.auth.get_username())
+            .header("X-Auth-Password", self.auth.get_password())
+            .json(&order)
+            .send()
+            .await?;
         let msg = resp.text().await?;
         println!("[STAFF-{}][PLACE][RESPONSE] {:?}", id, msg);
         Ok(())
@@ -105,7 +115,13 @@ impl Tablet for Staff {
 
         println!("[STAFF-{}][DELETE][REQUEST] {}", id, order.disp());
         let executor = Client::new();
-        let resp = executor.delete(url).json(&order).send().await?;
+        let resp = executor
+            .delete(url)
+            .header("X-Auth-Username", self.auth.get_username())
+            .header("X-Auth-Password", self.auth.get_password())
+            .json(&order)
+            .send()
+            .await?;
         let msg = resp.text().await?;
         println!("[STAFF-{}][DELETE][RESPONSE] {:?}", id, msg);
         Ok(())
@@ -125,7 +141,13 @@ impl Tablet for Staff {
 
         println!("[STAFF-{}][UPDATE][REQUEST] {}", id, order.disp());
         let executor = Client::new();
-        let resp = executor.patch(url).json(&order).send().await?;
+        let resp = executor
+            .patch(url)
+            .header("X-Auth-Username", self.auth.get_username())
+            .header("X-Auth-Password", self.auth.get_password())
+            .json(&order)
+            .send()
+            .await?;
         let msg = resp.text().await?.to_string();
         println!("[STAFF-{}][UPDATE][RESPONSE] {:?}", id, msg);
         Ok(())
@@ -138,9 +160,12 @@ impl Tablet for Staff {
         url.push_str(&Settings::get_status_order_api());
         url.push_str("/");
         url.push_str(&table_id);
+
         println!("[STAFF-{}][STATUS_ALL][REQUEST] SENT! TABLE: {}", id, id);
-        let resp = reqwest::get(url).await?.text().await?;
-        println!("[STAFF-{}][STATUS_ALL][RESPONSE] {:?}", id, resp);
+        let executor = Client::new();
+        let resp = executor.get(url).send().await?;
+        let msg = resp.text().await?.to_string();
+        println!("[STAFF-{}][STATUS_ALL][RESPONSE] {:?}", id, msg);
         Ok(())
     }
 
@@ -157,8 +182,10 @@ impl Tablet for Staff {
             "[STAFF-{}][STATUS_ITEM][REQUEST] SENT! TABLE: {} CHECK ITEM: {}",
             table_id, table_id, item
         );
-        let resp = reqwest::get(url).await?.text().await?;
-        println!("[STAFF-{}][STATUS_ITEM][RESPONSE] {:?}", table_id, resp);
+        let executor = Client::new();
+        let resp = executor.get(url).send().await?;
+        let msg = resp.text().await?.to_string();
+        println!("[STAFF-{}][STATUS_ITEM][RESPONSE] {:?}", table_id, msg);
         Ok(())
     }
 }

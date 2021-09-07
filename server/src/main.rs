@@ -11,6 +11,7 @@ use order_type::DeleteOrder;
 use order_type::PlaceOrder;
 use order_type::UpdateOrder;
 use settings::Settings;
+use sha256::digest_bytes;
 use std::process;
 use std::sync::Mutex;
 use std::{thread, time};
@@ -74,7 +75,7 @@ async fn main() -> tide::Result<()> {
 }
 
 fn error_handler() {
-    println!("[TERMINATION] Received signal to terminate server!");
+    println!("[TERMINATION] Received signal to terminate the server!");
     /* Waiting incomplete requests to be done */
     SIGNAL.lock().unwrap().set(true);
     let command: Dbio = Dbio::new();
@@ -95,8 +96,34 @@ fn error_handler() {
         }
     }
 
-    println!("[TERMINATION] Server terminated.");
+    println!("[TERMINATION] Fully served! Server terminated.");
     process::exit(0);
+}
+
+fn is_auth(req: &tide::Request<()>) -> bool {
+    (match req.header("X-Auth-Username") {
+        Some(name) => {
+            let username = b"restaurant";
+            if name.as_str() == digest_bytes(username) {
+                // println!("X-Auth-Username: {}", name.as_str());
+                true
+            } else {
+                false
+            }
+        }
+        None => false,
+    }) && (match req.header("X-Auth-Password") {
+        Some(pwd) => {
+            let password = b"paidy";
+            if pwd.as_str() == digest_bytes(password) {
+                // println!("X-Auth-Password: {}", pwd.as_str());
+                true
+            } else {
+                false
+            }
+        }
+        None => false,
+    })
 }
 
 async fn query_by_tableid(req: tide::Request<()>) -> tide::Result {
@@ -141,14 +168,18 @@ async fn query_by_tableid_and_item(req: tide::Request<()>) -> tide::Result {
 async fn add_by_tableid_and_item(mut req: tide::Request<()>) -> tide::Result {
     let terminated: bool = SIGNAL.lock().unwrap().get();
     if !terminated {
-        let order: PlaceOrder = req.body_json().await?;
-        let command: Dbio = Dbio::new();
-        let mut res: String = "".to_string();
-        match command.place(order) {
-            Ok(result) => res = result,
-            _ => {}
-        };
-        Ok(res.into())
+        if is_auth(&req) {
+            let order: PlaceOrder = req.body_json().await?;
+            let command: Dbio = Dbio::new();
+            let mut res: String = "".to_string();
+            match command.place(order) {
+                Ok(result) => res = result,
+                _ => {}
+            };
+            Ok(res.into())
+        } else {
+            Ok("Un-authorized place order".into())
+        }
     } else {
         Ok("Server is Closing. No More Services".into())
     }
@@ -157,14 +188,18 @@ async fn add_by_tableid_and_item(mut req: tide::Request<()>) -> tide::Result {
 async fn remove_by_tableid_and_item(mut req: tide::Request<()>) -> tide::Result {
     let terminated: bool = SIGNAL.lock().unwrap().get();
     if !terminated {
-        let order: DeleteOrder = req.body_json().await?;
-        let command: Dbio = Dbio::new();
-        let mut res: String = "".to_string();
-        match command.delete(order) {
-            Ok(result) => res = result,
-            _ => {}
-        };
-        Ok(res.into())
+        if is_auth(&req) {
+            let order: DeleteOrder = req.body_json().await?;
+            let command: Dbio = Dbio::new();
+            let mut res: String = "".to_string();
+            match command.delete(order) {
+                Ok(result) => res = result,
+                _ => {}
+            };
+            Ok(res.into())
+        } else {
+            Ok("Un-authorized delete order".into())
+        }
     } else {
         Ok("Server is Closing. No More Services".into())
     }
@@ -173,14 +208,18 @@ async fn remove_by_tableid_and_item(mut req: tide::Request<()>) -> tide::Result 
 async fn update_by_tableid_and_item(mut req: tide::Request<()>) -> tide::Result {
     let terminated: bool = SIGNAL.lock().unwrap().get();
     if !terminated {
-        let order: UpdateOrder = req.body_json().await?;
-        let command: Dbio = Dbio::new();
-        let mut res: String = "".to_string();
-        match command.update(order) {
-            Ok(result) => res = result,
-            _ => {}
-        };
-        Ok(res.into())
+        if is_auth(&req) {
+            let order: UpdateOrder = req.body_json().await?;
+            let command: Dbio = Dbio::new();
+            let mut res: String = "".to_string();
+            match command.update(order) {
+                Ok(result) => res = result,
+                _ => {}
+            };
+            Ok(res.into())
+        } else {
+            Ok("Un-authorized update order".into())
+        }
     } else {
         Ok("Server is Closing. No More Services".into())
     }

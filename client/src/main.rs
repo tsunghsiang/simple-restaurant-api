@@ -3,7 +3,7 @@ mod settings;
 mod staff;
 mod tablet;
 
-use settings::Settings;
+use settings::{Auth, Settings};
 use staff::Staff;
 use std::env;
 use std::panic;
@@ -25,7 +25,8 @@ async fn main() {
     let pool = ThreadPool::with_name("staff-group".into(), nums);
     for i in 1..nums + 1 {
         pool.execute(move || {
-            let staff: Staff = Staff::new(i.to_string());
+            let auth: Auth = Settings::get_auth();
+            let staff: Staff = Staff::new(i.to_string(), auth);
             println!(
                 "------------------------- [SPAWN-STAFF-ID] {} -------------------------",
                 staff.get_table_id()

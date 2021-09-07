@@ -6,3 +6,7 @@ place_order = "/api/place/order"
 delete_order = "/api/delete/order"
 update_order = "/api/update/order"
 status_order = "/api/status/order"
+
+[auth]
+username = "ee275d64dafcd283c25b00a66fb771834a2c2bfb1a7b472b67cf59fd6936254f"
+password = "0eea143ee0f08fd0b7fbf5e9bf9032f0125da321f9290c1273271bca9157b73a"
