@@ -41,7 +41,7 @@ async fn main() {
 
 fn get_client() -> Client {
     let mut config: Config = Config::default();
-    let mut url = "".to_string();
+    let (mut url, mut timeout) = ("".to_string(), 0);
     match config.merge(File::with_name("client/config/production.toml")) {
         Ok(_) => {}
         Err(err) => println!("[SETTINGS] Config Error: {}", err),
@@ -50,7 +50,11 @@ fn get_client() -> Client {
         Ok(field) => url = field.to_string(),
         Err(err) => println!("[SETTINGS] Error: {}", err),
     };
-    Client::new(url)
+    match config.get::<u64>("client.timeout") {
+        Ok(field) => timeout = field,
+        Err(err) => println!("[SETTINGS] Error: {}", err),
+    };
+    Client::new(url, timeout)
 }
 
 fn get_api() -> API {

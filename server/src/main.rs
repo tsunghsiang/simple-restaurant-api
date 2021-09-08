@@ -41,6 +41,11 @@ lazy_static! {
 #[async_std::main]
 async fn main() -> tide::Result<()> {
     let mut server = tide::new();
+    let mut host: String = "".to_string();
+    let config: Settings = Settings::new();
+    host.push_str(&config.server.get_ip());
+    host.push_str(":");
+    host.push_str(&config.server.get_port());
     let command: Dbio = Dbio::new();
 
     /* Check DB status first */
@@ -69,7 +74,7 @@ async fn main() -> tide::Result<()> {
     server
         .at("/api/update/order")
         .patch(update_by_tableid_and_item);
-    server.listen(Settings::get_srv_url()).await?;
+    server.listen(host).await?;
 
     Ok(())
 }

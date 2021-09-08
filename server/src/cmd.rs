@@ -13,8 +13,19 @@ pub struct Dbio {
 
 impl Dbio {
     pub fn new() -> Dbio {
+        let mut db_url: String = "".to_string();
+        let config: Settings = Settings::new();
+        db_url.push_str(&config.database.get_prefix());
+        db_url.push_str(":");
+        db_url.push_str(&config.database.get_password());
+        db_url.push_str("@");
+        db_url.push_str(&config.database.get_ip());
+        db_url.push_str(":");
+        db_url.push_str(&config.database.get_port());
+        db_url.push_str("/");
+        db_url.push_str(&config.database.get_db_name());
         Dbio {
-            name: Settings::get_db_url()
+            name: db_url
         }
     }
 

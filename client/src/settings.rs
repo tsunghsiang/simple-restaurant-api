@@ -3,6 +3,7 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize)]
 pub struct Client {
     url: String,
+    timeout: u64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -27,11 +28,17 @@ pub struct Settings {
 }
 
 impl Client {
-    pub fn new(url: String) -> Client {
-        Client { url: url }
+    pub fn new(url: String, timeout: u64) -> Client {
+        Client {
+            url: url,
+            timeout: timeout,
+        }
     }
     pub fn get_base_url(&self) -> String {
         self.url.clone()
+    }
+    pub fn get_timeout(&self) -> u64 {
+        self.timeout
     }
 }
 

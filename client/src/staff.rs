@@ -110,6 +110,7 @@ impl Tablet for Staff {
             .post(url)
             .header("X-Auth-Username", self.config.auth.get_username())
             .header("X-Auth-Password", self.config.auth.get_password())
+            .timeout(Duration::from_secs(self.config.client.get_timeout()))
             .json(&order)
             .send()
             .await?;
@@ -136,6 +137,7 @@ impl Tablet for Staff {
             .delete(url)
             .header("X-Auth-Username", self.config.auth.get_username())
             .header("X-Auth-Password", self.config.auth.get_password())
+            .timeout(Duration::from_secs(self.config.client.get_timeout()))
             .json(&order)
             .send()
             .await?;
@@ -162,6 +164,7 @@ impl Tablet for Staff {
             .patch(url)
             .header("X-Auth-Username", self.config.auth.get_username())
             .header("X-Auth-Password", self.config.auth.get_password())
+            .timeout(Duration::from_secs(self.config.client.get_timeout()))
             .json(&order)
             .send()
             .await?;
@@ -180,7 +183,11 @@ impl Tablet for Staff {
 
         println!("[STAFF-{}][STATUS_ALL][REQUEST] SENT! TABLE: {}", id, id);
         let executor = Client::new();
-        let resp = executor.get(url).send().await?;
+        let resp = executor
+            .get(url)
+            .timeout(Duration::from_secs(self.config.client.get_timeout()))
+            .send()
+            .await?;
         let msg = resp.text().await?.to_string();
         println!("[STAFF-{}][STATUS_ALL][RESPONSE] {:?}", id, msg);
         Ok(())
@@ -200,7 +207,11 @@ impl Tablet for Staff {
             table_id, table_id, item
         );
         let executor = Client::new();
-        let resp = executor.get(url).send().await?;
+        let resp = executor
+            .get(url)
+            .timeout(Duration::from_secs(self.config.client.get_timeout()))
+            .send()
+            .await?;
         let msg = resp.text().await?.to_string();
         println!("[STAFF-{}][STATUS_ITEM][RESPONSE] {:?}", table_id, msg);
         Ok(())
