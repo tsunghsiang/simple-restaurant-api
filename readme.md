@@ -52,7 +52,7 @@ Usually, you can test on your own by [curl](https://linux.die.net/man/1/curl) co
     ```
 3. **Create a new request for aquiring items of a specific table**. In the example, we are going to order items {A, B, C} with amount {1, 2, 3} respectively, for table id 4.
 
-    ```curl -X POST -H "Content-Type:application/json" -H "X-Auth-Username:{encrypted username}}" -H "X-Auth-Password:{encrypted password}" localhost:8080/api/place/order -d "{\"timestamp\":1234567890123,\"table_id\":\"4\",\"items\": [{\"name\":\"A\", \"amount\":1}, {\"name\":\"B\", \"amount\":2}, {\"name\":\"C\", "amount":3}]}"```
+    ```curl -X POST -H "Content-Type:application/json" -H "X-Auth-Username:{encrypted username}" -H "X-Auth-Password:{encrypted password}" localhost:8080/api/place/order -d "{\"timestamp\":1234567890123,\"table_id\":\"4\",\"items\": [{\"name\":\"A\", \"amount\":1}, {\"name\":\"B\", \"amount\":2}, {\"name\":\"C\", "amount":3}]}"```
     
     Request JSON Format:
     ```json
@@ -68,7 +68,7 @@ Usually, you can test on your own by [curl](https://linux.die.net/man/1/curl) co
     ```
 4. **Remove an item from a list of a specific table id**.
 
-    ```curl -X DELETE -H "Content-Type:application/json" -H "X-Auth-Username:{encrypted username}}" -H "X-Auth-Password:{encrypted password}" localhost:8080/api/delete/order -d "{\"timestamp\": 1234567890123,\"table_id\": \"4\", \"item\": \"A\"}"```
+    ```curl -X DELETE -H "Content-Type:application/json" -H "X-Auth-Username:{encrypted username}" -H "X-Auth-Password:{encrypted password}" localhost:8080/api/delete/order -d "{\"timestamp\": 1234567890123,\"table_id\": \"4\", \"item\": \"A\"}"```
 
     Request JSON Format:
     ```json
@@ -80,7 +80,7 @@ Usually, you can test on your own by [curl](https://linux.die.net/man/1/curl) co
     ```
 5. **Update one or more items of a specific table**. For example, if you'd like to update the amount of an item that is neither done nor doing.
 
-    ```curl -X PATCH -H "Content-Type:application/json" -H "X-Auth-Username:{encrypted username}}" -H "X-Auth-Password:{encrypted password}" localhost:8080/api/update/order -d "{\"timestamp\":1234567890123,\"table_id\":\"4\",\"items\": [{\"name\":\"A\", \"amount\":8}, {\"name\":\"B\", \"amount\":3}]}"```
+    ```curl -X PATCH -H "Content-Type:application/json" -H "X-Auth-Username:{encrypted username}" -H "X-Auth-Password:{encrypted password}" localhost:8080/api/update/order -d "{\"timestamp\":1234567890123,\"table_id\":\"4\",\"items\": [{\"name\":\"A\", \"amount\":8}, {\"name\":\"B\", \"amount\":3}]}"```
 
     Request JSON Format:
     ```json
@@ -88,8 +88,8 @@ Usually, you can test on your own by [curl](https://linux.die.net/man/1/curl) co
         "timestamp": 1234567890123,
         "table_id": "4",
         "items": [
-            { "name": "A", amount: 8 },
-            { "name": "B", amount: 3 }
+            { "name": "A", "amount": 8 },
+            { "name": "B", "amount": 3 }
         ]
     }
     ```
