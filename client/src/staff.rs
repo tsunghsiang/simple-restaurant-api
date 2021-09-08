@@ -1,5 +1,5 @@
 use crate::order_type::{DeleteOrder, ItemPair, PlaceOrder, ReqType, UpdateOrder};
-use crate::settings::{Auth, Settings};
+use crate::settings::Settings;
 use crate::tablet::Tablet;
 
 use async_trait::async_trait;
@@ -14,14 +14,14 @@ use tokio::runtime::Runtime;
 
 pub struct Staff {
     table_id: String,
-    auth: Auth,
+    config: Settings,
 }
 
 impl Staff {
-    pub fn new(table_id: String, auth: Auth) -> Staff {
+    pub fn new(table_id: String, config: Settings) -> Staff {
         Staff {
             table_id: table_id,
-            auth: auth,
+            config: config,
         }
     }
 }
@@ -42,32 +42,49 @@ impl Tablet for Staff {
 
             match ReqType::try_from(req_type) {
                 Ok(ReqType::Place) => {
-                    runtime.block_on(async {
+                    match runtime.block_on(async {
                         self.place_order(self.get_table_id(), generate_items())
                             .await
-                    });
+                    }) {
+                        Ok(_) => {}
+                        Err(e) => println!("[PLACE][ERROR] {}", e),
+                    }
                 }
                 Ok(ReqType::Delete) => {
-                    runtime.block_on(async {
+                    match runtime.block_on(async {
                         let val: i8 = rng.gen_range(0..26);
                         self.delete_order(self.get_table_id(), get_item(val)).await
-                    });
+                    }) {
+                        Ok(_) => {}
+                        Err(e) => println!("[DELETE][ERROR] {}", e),
+                    }
                 }
                 Ok(ReqType::Update) => {
-                    runtime.block_on(async {
+                    match runtime.block_on(async {
                         self.update_order(self.get_table_id(), generate_items())
                             .await
-                    });
+                    }) {
+                        Ok(_) => {}
+                        Err(e) => println!("[UPDATE][ERROR] {}", e),
+                    }
                 }
                 Ok(ReqType::StatusAll) => {
-                    runtime.block_on(async { self.status_order_all(self.get_table_id()).await });
+                    match runtime
+                        .block_on(async { self.status_order_all(self.get_table_id()).await })
+                    {
+                        Ok(_) => {}
+                        Err(e) => println!("[STATUS_ALL][ERROR] {}", e),
+                    }
                 }
                 Ok(ReqType::StatusItem) => {
-                    runtime.block_on(async {
+                    match runtime.block_on(async {
                         let val: i8 = rng.gen_range(0..26);
                         self.status_order_item(self.get_table_id(), get_item(val))
                             .await
-                    });
+                    }) {
+                        Ok(_) => {}
+                        Err(e) => println!("[STATUS_ALL][ERROR] {}", e),
+                    }
                 }
                 _ => {}
             }
@@ -84,15 +101,15 @@ impl Tablet for Staff {
         };
 
         let mut url: String = "".to_string();
-        url.push_str(&Settings::get_base_url());
-        url.push_str(&Settings::get_place_order_api());
+        url.push_str(&self.config.client.get_base_url());
+        url.push_str(&self.config.api.get_place_order_api());
 
         println!("[STAFF-{}][PLACE][REQUEST] {}", id, order.disp());
         let executor = Client::new();
         let resp = executor
             .post(url)
-            .header("X-Auth-Username", self.auth.get_username())
-            .header("X-Auth-Password", self.auth.get_password())
+            .header("X-Auth-Username", self.config.auth.get_username())
+            .header("X-Auth-Password", self.config.auth.get_password())
             .json(&order)
             .send()
             .await?;
@@ -110,15 +127,15 @@ impl Tablet for Staff {
         };
 
         let mut url: String = "".to_string();
-        url.push_str(&Settings::get_base_url());
-        url.push_str(&Settings::get_delete_order_api());
+        url.push_str(&self.config.client.get_base_url());
+        url.push_str(&self.config.api.get_delete_order_api());
 
         println!("[STAFF-{}][DELETE][REQUEST] {}", id, order.disp());
         let executor = Client::new();
         let resp = executor
             .delete(url)
-            .header("X-Auth-Username", self.auth.get_username())
-            .header("X-Auth-Password", self.auth.get_password())
+            .header("X-Auth-Username", self.config.auth.get_username())
+            .header("X-Auth-Password", self.config.auth.get_password())
             .json(&order)
             .send()
             .await?;
@@ -136,15 +153,15 @@ impl Tablet for Staff {
         };
 
         let mut url: String = "".to_string();
-        url.push_str(&Settings::get_base_url());
-        url.push_str(&Settings::get_update_order_api());
+        url.push_str(&self.config.client.get_base_url());
+        url.push_str(&self.config.api.get_update_order_api());
 
         println!("[STAFF-{}][UPDATE][REQUEST] {}", id, order.disp());
         let executor = Client::new();
         let resp = executor
             .patch(url)
-            .header("X-Auth-Username", self.auth.get_username())
-            .header("X-Auth-Password", self.auth.get_password())
+            .header("X-Auth-Username", self.config.auth.get_username())
+            .header("X-Auth-Password", self.config.auth.get_password())
             .json(&order)
             .send()
             .await?;
@@ -156,8 +173,8 @@ impl Tablet for Staff {
     async fn status_order_all(&self, table_id: String) -> Result<(), Error> {
         let id = table_id.clone();
         let mut url: String = "".to_string();
-        url.push_str(&Settings::get_base_url());
-        url.push_str(&Settings::get_status_order_api());
+        url.push_str(&self.config.client.get_base_url());
+        url.push_str(&self.config.api.get_status_order_api());
         url.push_str("/");
         url.push_str(&table_id);
 
@@ -171,8 +188,8 @@ impl Tablet for Staff {
 
     async fn status_order_item(&self, table_id: String, item: String) -> Result<(), Error> {
         let mut url: String = "".to_string();
-        url.push_str(&Settings::get_base_url());
-        url.push_str(&Settings::get_status_order_api());
+        url.push_str(&self.config.client.get_base_url());
+        url.push_str(&self.config.api.get_status_order_api());
         url.push_str("/");
         url.push_str(&table_id);
         url.push_str("/");

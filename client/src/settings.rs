@@ -1,13 +1,12 @@
-use config::{Config, File};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
-struct Client {
+pub struct Client {
     url: String,
 }
 
 #[derive(Debug, Deserialize)]
-struct API {
+pub struct API {
     place_order: String,
     delete_order: String,
     update_order: String,
@@ -22,12 +21,56 @@ pub struct Auth {
 
 #[derive(Debug, Deserialize)]
 pub struct Settings {
-    client: Client,
-    api: API,
-    auth: Auth,
+    pub client: Client,
+    pub api: API,
+    pub auth: Auth,
+}
+
+impl Client {
+    pub fn new(url: String) -> Client {
+        Client { url: url }
+    }
+    pub fn get_base_url(&self) -> String {
+        self.url.clone()
+    }
+}
+
+impl API {
+    pub fn new(
+        place_order_api: String,
+        delete_order_api: String,
+        update_order_api: String,
+        status_order_api: String,
+    ) -> API {
+        API {
+            place_order: place_order_api,
+            delete_order: delete_order_api,
+            update_order: update_order_api,
+            status_order: status_order_api,
+        }
+    }
+    pub fn get_place_order_api(&self) -> String {
+        self.place_order.clone()
+    }
+    pub fn get_delete_order_api(&self) -> String {
+        self.delete_order.clone()
+    }
+    pub fn get_update_order_api(&self) -> String {
+        self.update_order.clone()
+    }
+    pub fn get_status_order_api(&self) -> String {
+        self.status_order.clone()
+    }
 }
 
 impl Auth {
+    pub fn new(username: String, password: String) -> Auth {
+        Auth {
+            username: username,
+            password: password,
+        }
+    }
+
     pub fn get_username(&self) -> String {
         self.username.clone()
     }
@@ -37,103 +80,11 @@ impl Auth {
 }
 
 impl Settings {
-    pub fn get_base_url() -> String {
-        let mut config: Config = Config::default();
-        let mut res: String = "".to_string();
-        match config.merge(File::with_name("client/config/production.toml")) {
-            Ok(_) => {}
-            Err(err) => println!("[SETTINGS] Config Error: {}", err),
-        }
-
-        match config.get::<String>("client.base_url") {
-            Ok(field) => res.push_str(&field),
-            Err(err) => println!("[SETTINGS] Error: {}", err),
-        }
-
-        res
-    }
-
-    pub fn get_place_order_api() -> String {
-        let mut config: Config = Config::default();
-        let mut res: String = "".to_string();
-        match config.merge(File::with_name("client/config/production.toml")) {
-            Ok(_) => {}
-            Err(err) => println!("[SETTINGS] Config Error: {}", err),
-        }
-
-        match config.get::<String>("api.place_order") {
-            Ok(field) => res.push_str(&field),
-            Err(err) => println!("[SETTINGS] Error: {}", err),
-        }
-
-        res
-    }
-
-    pub fn get_delete_order_api() -> String {
-        let mut config: Config = Config::default();
-        let mut res: String = "".to_string();
-        match config.merge(File::with_name("client/config/production.toml")) {
-            Ok(_) => {}
-            Err(err) => println!("[SETTINGS] Config Error: {}", err),
-        }
-
-        match config.get::<String>("api.delete_order") {
-            Ok(field) => res.push_str(&field),
-            Err(err) => println!("[SETTINGS] Error: {}", err),
-        }
-
-        res
-    }
-
-    pub fn get_update_order_api() -> String {
-        let mut config: Config = Config::default();
-        let mut res: String = "".to_string();
-        match config.merge(File::with_name("client/config/production.toml")) {
-            Ok(_) => {}
-            Err(err) => println!("[SETTINGS] Config Error: {}", err),
-        }
-
-        match config.get::<String>("api.update_order") {
-            Ok(field) => res.push_str(&field),
-            Err(err) => println!("[SETTINGS] Error: {}", err),
-        }
-
-        res
-    }
-
-    pub fn get_status_order_api() -> String {
-        let mut config: Config = Config::default();
-        let mut res: String = "".to_string();
-        match config.merge(File::with_name("client/config/production.toml")) {
-            Ok(_) => {}
-            Err(err) => println!("[SETTINGS] Config Error: {}", err),
-        }
-
-        match config.get::<String>("api.status_order") {
-            Ok(field) => res.push_str(&field),
-            Err(err) => println!("[SETTINGS] Error: {}", err),
-        }
-
-        res
-    }
-    pub fn get_auth() -> Auth {
-        let mut config: Config = Config::default();
-        let (mut uname, mut pwd) = ("".to_string(), "".to_string());
-        match config.merge(File::with_name("client/config/production.toml")) {
-            Ok(_) => {}
-            Err(err) => println!("[SETTINGS] Config Error: {}", err),
-        };
-        match config.get::<String>("auth.username") {
-            Ok(field) => uname = field.to_string(),
-            Err(err) => println!("[SETTINGS] Error: {}", err),
-        };
-        match config.get::<String>("auth.password") {
-            Ok(field) => pwd = field.to_string(),
-            Err(err) => println!("[SETTINGS] Error: {}", err),
-        };
-        Auth {
-            username: uname,
-            password: pwd,
+    pub fn new(client: Client, api: API, auth: Auth) -> Settings {
+        Settings {
+            client: client,
+            api: api,
+            auth: auth,
         }
     }
 }
