@@ -1,5 +1,6 @@
 use config::{Config, File};
 use serde::Deserialize;
+use std::path::PathBuf;
 
 #[derive(Debug, Deserialize)]
 pub struct Server {
@@ -60,7 +61,16 @@ impl Settings {
             "".to_string(),
             "".to_string(),
         );
-        match config.merge(File::with_name("server/config/production.toml")) {
+
+        let relative_path = PathBuf::from("cargo_home");
+        let mut path: &str = "";
+        if relative_path.starts_with("/server") {
+            path = "server/config/production.toml";
+        } else {
+            path = "config/production.toml";
+        };
+
+        match config.merge(File::with_name(path)) {
             Ok(_) => {}
             Err(err) => println!("[SETTINGS] Config Error: {}", err),
         }
@@ -80,17 +90,14 @@ impl Settings {
             Ok(field) => password = field,
             Err(err) => println!("[SETTINGS] Error: {}", err),
         }
-
         match config.get::<String>("database.ip") {
             Ok(field) => db_ip = field,
             Err(err) => println!("[SETTINGS] Error: {}", err),
         }
-
         match config.get::<String>("database.port") {
             Ok(field) => db_port = field,
             Err(err) => println!("[SETTINGS] Error: {}", err),
         }
-
         match config.get::<String>("database.db_name") {
             Ok(field) => db_name = field,
             Err(err) => println!("[SETTINGS] Error: {}", err),
@@ -106,5 +113,20 @@ impl Settings {
                 db_name: db_name,
             },
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn test_settings_new_given_config_provided_when_init_then_fields_obtained() {
+        let config: Settings = Settings::new();
+        assert!(config.server.get_ip().len() > 0);
+        assert!(config.server.get_port().len() > 0);
+        assert_eq!("postgresql://postgres", config.database.get_prefix());
+        assert!(config.database.get_ip().len() > 0);
+        assert!(config.database.get_port().len() > 0);
+        assert_eq!("restaurant", config.database.get_db_name());
     }
 }
