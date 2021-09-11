@@ -157,7 +157,21 @@ Usually, you can test on your own by [curl](https://linux.die.net/man/1/curl) co
 Considering COVID-19 situation, we have proposed some revised rules for customers to order to avoid consumption of redundant food.
 ## DB Schema Design
 ## Unit Tests
-In the project, there are many unit tests regarding to db access operations. In order to prevent interference from each other because of parallelism of test suites, which means it would concurrently launch unit-tests at the same time. 
+In the project, there are many unit tests regarding to db access operations. In order to prevent interference from each other because of parallelism of test runner, which means it would concurrently launch thread per unit-test at the same time. Therefore, please follow the instruction below to validate correctness of function units.
+
+```cmd
+cargo test -- --test-threads=1
+```
+
+In order to avoid unexpected results caused by concurrent access from different threads of unit-test cases, only 1 thread is adopted to run test cases sequentially. The result should be as below:
+
+![unit test result](./imgs/unit_test_result.png)
+
+Note that there is a writing format for describing the relation among function names, scenarios and expected results as follows:
+
+```
+test_[module name]_[function name]_given_[pre-condition]_when_[action]_then_[expected results]
+```
 ## Build Server/Client
 ## Start Running Server/Client
 ## Other Issues
