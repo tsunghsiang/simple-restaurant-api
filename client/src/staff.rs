@@ -269,3 +269,51 @@ fn timestamp() -> i64 {
     let mills: i64 = (timespec.sec as i64 * 1000) + (timespec.nsec as i64 / 1000 / 1000);
     mills
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_staff_get_table_id_given_cofig_provided_when_instantiated_then_table_id_obtained() {
+        let config: Settings = Settings::new();
+        let staff: Staff = Staff::new("1".to_string(), config);
+        assert_eq!("1", staff.get_table_id());
+    }
+
+    #[test]
+    fn test_get_item_given_rand_num_provided_when_executed_then_an_alphabet_obtained() {
+        assert_eq!("A", get_item(0));
+        assert_eq!("B", get_item(1));
+        assert_eq!("C", get_item(2));
+        assert_eq!("D", get_item(3));
+        assert_eq!("E", get_item(4));
+        assert_eq!("F", get_item(5));
+        assert_eq!("G", get_item(6));
+        assert_eq!("H", get_item(7));
+        assert_eq!("I", get_item(8));
+        assert_eq!("J", get_item(9));
+        assert_eq!("K", get_item(10));
+        assert_eq!("L", get_item(11));
+        assert_eq!("M", get_item(12));
+        assert_eq!("N", get_item(13));
+        assert_eq!("O", get_item(14));
+        assert_eq!("P", get_item(15));
+        assert_eq!("Q", get_item(16));
+        assert_eq!("R", get_item(17));
+        assert_eq!("S", get_item(18));
+        assert_eq!("T", get_item(19));
+        assert_eq!("U", get_item(20));
+        assert_eq!("V", get_item(21));
+        assert_eq!("W", get_item(22));
+        assert_eq!("X", get_item(23));
+        assert_eq!("Y", get_item(24));
+        assert_eq!("Z", get_item(25));
+        assert_eq!("A", get_item(26));
+    }
+
+    #[test]
+    fn test_generate_items_given_at_least_one_rand_num_provided_when_invoked_then_vec_len_greater_than_zero() {
+        let res: Vec<ItemPair> = generate_items();
+        assert!(res.len() > 0);
+    }
+}

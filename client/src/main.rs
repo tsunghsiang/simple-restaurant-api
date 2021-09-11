@@ -25,7 +25,6 @@ async fn main() {
     let pool = ThreadPool::with_name("staff-group".into(), nums);
     for i in 1..nums + 1 {
         pool.execute(move || {
-            //let auth: Auth = Settings::get_auth();
             let config: Settings = Settings::new();
             let staff: Staff = Staff::new(i.to_string(), config);
             println!(

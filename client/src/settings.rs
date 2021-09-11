@@ -1,5 +1,6 @@
 use config::{Config, File};
 use serde::Deserialize;
+use std::path::PathBuf;
 
 #[derive(Debug, Deserialize)]
 pub struct Client {
@@ -65,7 +66,16 @@ impl Settings {
     pub fn new() -> Self {
         let mut config: Config = Config::default();
         let (mut url, mut timeout) = ("".to_string(), 0);
-        match config.merge(File::with_name("client/config/production.toml")) {
+
+        let relative_path = PathBuf::from("cargo_home");
+        let mut path: &str = "";
+        if relative_path.starts_with("/client") {
+            path = "client/config/production.toml";
+        } else {
+            path = "config/production.toml";
+        };
+
+        match config.merge(File::with_name(path)) {
             Ok(_) => {}
             Err(err) => println!("[SETTINGS] Config Error: {}", err),
         };
@@ -127,5 +137,22 @@ impl Settings {
                 password: pwd,
             },
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_settings_new_given_config_provided_when_init_then_fields_obtained() {
+        let config: Settings = Settings::new();
+        assert!(config.client.get_base_url().len() > 0);
+        assert!(config.client.get_timeout() > 0);
+        assert_eq!("/api/place/order", config.api.get_place_order_api());
+        assert_eq!("/api/delete/order", config.api.get_delete_order_api());
+        assert_eq!("/api/update/order", config.api.get_update_order_api());
+        assert_eq!("/api/status/order", config.api.get_status_order_api());
+        assert!(config.auth.get_username().len() > 0);
+        assert!(config.auth.get_password().len() > 0);
     }
 }
