@@ -2155,25 +2155,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "test"
-version = "0.1.0"
-dependencies = [
- "async-std",
- "async-trait",
- "futures",
- "num_enum",
- "postgres",
- "postgres-types",
- "rand 0.8.4",
- "reqwest",
- "serde 1.0.127",
- "serde_json",
- "tide",
- "time 0.1.44",
- "tokio",
-]
-
-[[package]]
 name = "thiserror"
 version = "1.0.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
