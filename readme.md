@@ -133,8 +133,8 @@ Usually, you can test on your own by [curl](https://linux.die.net/man/1/curl) co
         "timestamp": 1234567890123,
         "table_id": "4",
         "items": [
-            { "name": "A", amount: 8 },
-            { "name": "B", amount: 3 }
+            { "name": "A", "amount": 8 },
+            { "name": "B", "amount": 3 }
         ]
     }
     ```
