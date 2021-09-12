@@ -154,8 +154,38 @@ Usually, you can test on your own by [curl](https://linux.die.net/man/1/curl) co
     ```
     For example, if you'd like to update the amount of an item that is in **neither ```done``` nor ```doing```** state. The order would be rejected if the specified item is not in **```todo```** state. You can only wait for the table status to be done; relaucn a new order.
 ## Order Rules
-Considering COVID-19 situation, we have proposed some revised rules for customers to order to avoid consumption of redundant food.
+Considering COVID-19 situation, we have proposed some revised rules for customers to order to avoid consumption of redundant food. 
+
+1. If a table is fully served, a staff could help customers place a new order with both table id and specified items/amounts.
+2. If you'd like to delete a certain item on your order, please tell our staffs for assistance. However, for items that have been ```doing``` or ```done```. We would not serve the requests.
+3. To check all items' preparation status of your table, ask our staffs to do it for you.
+4. To check a certain item's status of your table, ask our staffs to do it for you.
+5. To update your original order, we only allow 
+    
+    [1] items still in ```todo``` state 
+    
+    [2] new items haven't been requested
+    
+    to be updated on the order waiting for service.
 ## DB Schema Design
+![db diagram](./imgs/db_diagram.png)
+
+In realistic scenarios, there is a one-to-many mapping between each table and ordered items since each table might contain many items. As a result, I associate both by field ```table_id```. Detailed description of fields is indicated as follows:
+
+| tablet field | timestamp              | table_id      | table_status                                                                      |
+| :----------: | :--------------------- | :------------ | :-------------------------------------------------------------------------------- |
+| description  | The ordered time (UTC) | id of a table | serving status of a table, usually in ```todo```, ```doing``` or ```done``` state |
+
+| items field | timestamp              | table_id      | item                                             | amount            | item_status                                                                       | cook_time                                      |
+| :---------: | :--------------------- | :------------ | :----------------------------------------------- | :---------------- | :-------------------------------------------------------------------------------- | :--------------------------------------------- |
+| description | The ordered time (UTC) | id of a table | item name, limited to upper-case alphabet (A..Z) | amount of an item | serving status of an item, usually in ```todo```, ```doing``` or ```done``` state | randomly-generated time within [5, 15] minutes |
+
+Let's compare some terms associative with order results you would see in the db schema.
+
+|         -          | ```todo```                                    | ```doing```                                   | ```done```           |
+| :----------------: | :-------------------------------------------- | :-------------------------------------------- | :------------------- |
+| ```item_status```  | waiting to be served                          | being served                                  | served               |
+| ```table_status``` | all items of a table are waiting to be served | one or more items of a table are being served | all items are served |
 ## Unit Tests
 In the project, there are many unit tests regarding to db access operations. In order to prevent interference from each other because of parallelism of test runner, which means it would concurrently launch thread per unit-test at the same time. Therefore, please follow the instruction below to validate correctness of function units.
 
@@ -170,8 +200,35 @@ In order to avoid unexpected results caused by concurrent access from different 
 Note that there is a writing format for describing the relation among function names, scenarios and expected results as follows:
 
 ```
-test_[module name]_[function name]_given_[pre-condition]_when_[action]_then_[expected results]
+test_[module name]_[function name]_given_[pre-condition]_when_[action]_then_[expected result]
 ```
-## Build Server/Client
-## Start Running Server/Client
+## Build & Launch the Application
+The project contains both ```server-side``` and ```client-side``` applications. The former simulates the back house of a restaurant dealing with orders received from staffs while the latter launches multiple tablets responsible for ```placing```/```deleting```/```updating```/```querying``` orders from customers.
+
+To get an overview of the project, refer to [Cargo.toml](./Cargo.toml) in the root directory
+
+```toml
+[workspace]
+members = ["server", "client"]
+```
+
+As you see, there are primarily 2 subprograms, ```server``` and  ```client```. To compile them respectively, apply instructions as below:
+
+```cmd
+cargo build --bin server
+```
+```
+cargo build --bin client
+```
+
+Similarly, when you are going to lauch both applications, follow instructions below:
+
+```cmd
+cargo run --bin server
+```
+```
+cargo run --bin client [nums]
+```
+
+Note that ```[nums]``` indicates the numbers of staffs serving in the restaurant, which should be a positive integer. If you don't specify them or pass a non-positive integer to it, the client process would panic!
 ## Other Issues
