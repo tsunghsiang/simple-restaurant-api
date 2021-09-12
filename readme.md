@@ -245,7 +245,7 @@ To guarantee customers' rights are protected, our system is designed to handle u
 
 ![exception handling](./imgs/graceful_shutdown.png)
 ## Other Issues
-There are still some other topics we could take into account i the future from perspectives of behavior recording, malicious attack, identifier authentication, etc.
+There are still some other topics we could take into account in the future from perspectives of behavior recording, malicious attack, identifier authentication, etc.
 - **Logger**
 To demonstrate request-response behavior, message would be directed to console that would dimish system performance due to I/O behavior. In my opinion, a logger should be adopted to record behavior of restaurant/customers and direct them to another filesystem because these messages are usually not mission-critical.
 
