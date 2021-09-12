@@ -231,4 +231,26 @@ cargo run --bin client [nums]
 ```
 
 Note that ```[nums]``` indicates the numbers of staffs serving in the restaurant, which should be a positive integer. If you don't specify them or pass a non-positive integer to it, the client process would panic!
+## Notice
+In the homework requirement, each item is given a random amount of time between 5 and 15 minutes to complete. 
+
+To rapidly show the result for each request, I would assign each item 5 to 15 seconds to prepare. (You could refer it as minute-level)
+
+Lastly, for each staff serving customers, they would randomly send a request of different types per second.
+
+![demo](./imgs/demo.png)
+
+## Graceful Shutdown
+To guarantee customers' rights are protected, our system is designed to handle unexpected shutdown. Once it occurrs, the system would be waiting for the rest orders to be fully served till shutdown; other incoming requests are to be rejected due to emergencies.
+
+![exception handling](./imgs/graceful_shutdown.png)
 ## Other Issues
+There are still some other topics we could take into account i the future from perspectives of behavior recording, malicious attack, identifier authentication, etc.
+- **Logger**
+To demonstrate request-response behavior, message would be directed to console that would dimish system performance due to I/O behavior. In my opinion, a logger should be adopted to record behavior of restaurant/customers and direct them to another filesystem because these messages are usually not mission-critical.
+
+- **Request Rate Control**
+DDoS attack is common when some people are going to break down your system. To prevent this from happening and continue to serve customers, it matters to setup a rate limit (ex: 3 req/sec) for requests from all tables to constrain flow.
+
+- **Identification Authentication**
+Any ```POST```, ```DELETE``` or ```PATCH``` request is able to modify the state of the database, so only authorized staffs, rather than other strangers, can use them. In my project, I only applied ```basic username/password authentication``` for each staff, which is still insufficient. Ideally, each staff should acquire an OTP (One-Time Password) as a token to pass the request handling.

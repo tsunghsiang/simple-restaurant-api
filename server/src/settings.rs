@@ -62,14 +62,22 @@ impl Settings {
             "".to_string(),
         );
 
-        let relative_path = PathBuf::from("cargo_home");
+        let relative_path: PathBuf;
+        let mut absolute_path = std::env::current_dir().unwrap();
         let mut path: &str = "";
-        if relative_path.starts_with("/server") {
-            path = "server/config/production.toml";
-        } else {
-            path = "config/production.toml";
-        };
 
+        //println!("absolute path: {:#?}", absolute_path);
+        if absolute_path.ends_with("server") {
+            relative_path = PathBuf::from("config\\production.toml");
+        } else {
+            relative_path = PathBuf::from("server\\config\\production.toml");
+        };
+        absolute_path.push(relative_path);
+
+        match absolute_path.to_str() {
+            Some(field) => path = field,
+            None => {}
+        };
         match config.merge(File::with_name(path)) {
             Ok(_) => {}
             Err(err) => println!("[SETTINGS] Config Error: {}", err),
