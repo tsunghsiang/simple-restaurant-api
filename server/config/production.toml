@@ -4,7 +4,7 @@ port = "8080"
 
 [database]
 prefix = "postgresql://postgres"
-password = "nctusrs0915904265"
+password = "test"
 ip = "localhost"
 port = "5432"
 db_name = "restaurant"
