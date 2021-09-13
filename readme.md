@@ -19,7 +19,8 @@ The project is developed for the [interview problem](https://github.com/paidy/in
 
 ## Prerequisites
 - **Database Version**
-In my project, [PostgreSQL 13.4 database](https://www.postgresql.org/) is applied , try update your database to [latest version ](https://www.postgresql.org/download/) here.
+
+    In my project, [PostgreSQL 13.4 database](https://www.postgresql.org/) is applied , try update your database to [latest version ](https://www.postgresql.org/download/) here.
 
 - **[Client Configurations](./client/config/production.toml)**
     ```toml
@@ -176,9 +177,9 @@ In realistic scenarios, there is a one-to-many mapping between each table and or
 | :----------: | :--------------------- | :------------ | :-------------------------------------------------------------------------------- |
 | description  | The ordered time (UTC) | id of a table | serving status of a table, usually in ```todo```, ```doing``` or ```done``` state |
 
-| items field | timestamp              | table_id      | item                                             | amount            | item_status                                                                       | cook_time                                      |
-| :---------: | :--------------------- | :------------ | :----------------------------------------------- | :---------------- | :-------------------------------------------------------------------------------- | :--------------------------------------------- |
-| description | The ordered time (UTC) | id of a table | item name, limited to upper-case alphabet (A..Z) | amount of an item | serving status of an item, usually in ```todo```, ```doing``` or ```done``` state | randomly-generated time within [5, 15] minutes |
+| items field | timestamp              | table_id      | item                                             | amount            | item_status                                                                       |
+| :---------: | :--------------------- | :------------ | :----------------------------------------------- | :---------------- | :-------------------------------------------------------------------------------- |
+| description | The ordered time (UTC) | id of a table | item name, limited to upper-case alphabet (A..Z) | amount of an item | serving status of an item, usually in ```todo```, ```doing``` or ```done``` state |
 
 Let's compare some terms associative with order results you would see in the db schema.
 
