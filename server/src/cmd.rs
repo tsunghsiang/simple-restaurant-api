@@ -54,8 +54,7 @@ impl DB for Dbio {
                 table_id    VARCHAR NOT NULL,
                 item        VARCHAR NOT NULL,
                 amount      INTEGER NOT NULL,
-                item_status VARCHAR NOT NULL,
-                cook_time   INTEGER NOT NULL
+                item_status VARCHAR NOT NULL
             )
         ")?;
 
@@ -89,8 +88,8 @@ impl DB for Dbio {
                 
                     for elem in order.items {
                         let (ts, table_id, item, amount, status, cook_time) = (order.timestamp, order.table_id.to_string(), elem.name, elem.amount, "'todo'".to_string(), rng.gen_range(5..16));    
-                        client.execute("INSERT INTO items(timestamp, table_id, item, amount, item_status, cook_time) VALUES ($1, $2, $3, $4, $5, $6)",
-                                        &[&ts, &table_id, &item, &amount, &status, &cook_time])?;
+                        client.execute("INSERT INTO items(timestamp, table_id, item, amount, item_status) VALUES ($1, $2, $3, $4, $5)",
+                                        &[&ts, &table_id, &item, &amount, &status])?;
                         // spawn a task handling item preparation
                         thread::spawn(move || block_on(cook_order_item(ts, &table_id.to_string(), &item.to_string(), cook_time)));
                     }
@@ -106,8 +105,8 @@ impl DB for Dbio {
             
                 for elem in order.items {
                     let (ts, table_id, item, amount, status, cook_time) = (order.timestamp, order.table_id.to_string(), elem.name, elem.amount, "'todo'".to_string(), rng.gen_range(5..16));    
-                    client.execute("INSERT INTO items(timestamp, table_id, item, amount, item_status, cook_time) VALUES ($1, $2, $3, $4, $5, $6)",
-                                    &[&ts, &table_id, &item, &amount, &status, &cook_time])?;
+                    client.execute("INSERT INTO items(timestamp, table_id, item, amount, item_status) VALUES ($1, $2, $3, $4, $5)",
+                                    &[&ts, &table_id, &item, &amount, &status])?;
                     // spawn a task handling item preparation
                     thread::spawn(move || block_on(cook_order_item(ts, &table_id.to_string(), &item.to_string(), cook_time)));
                 }
@@ -554,7 +553,7 @@ mod test {
                 client.execute("DELETE FROM tablet", &[]).unwrap();
                 client.execute("DELETE FROM items", &[]).unwrap();
                 client.execute("INSERT INTO tablet(timestamp, table_id, table_status) VALUES(1234567890123, '1', 'todo')", &[]).unwrap();
-                client.execute("INSERT INTO items(timestamp, table_id, item, amount, item_status, cook_time) VALUES(1234567890123, '1', 'A', 2, 'todo', 10)", &[]).unwrap();
+                client.execute("INSERT INTO items(timestamp, table_id, item, amount, item_status) VALUES(1234567890123, '1', 'A', 2, 'todo')", &[]).unwrap();
                 match dbio.query_by_tableid_and_item("1".to_string(), "A".to_string()) {
                     Ok(res) => assert!(res.contains("item")),
                     Err(e) => panic!("[TEST::DBIO_QUERY_BY_TABLEID_AND_ITEM] Error: {}", e)
@@ -596,7 +595,7 @@ mod test {
                 client.execute("DELETE FROM tablet", &[]).unwrap();
                 client.execute("DELETE FROM items", &[]).unwrap();
                 client.execute("INSERT INTO tablet(timestamp, table_id, table_status) VALUES(1234567890123, '1', 'todo')", &[]).unwrap();
-                client.execute("INSERT INTO items(timestamp, table_id, item, amount, item_status, cook_time) VALUES(1234567890123, '1', 'A', 2, 'todo', 10)", &[]).unwrap();
+                client.execute("INSERT INTO items(timestamp, table_id, item, amount, item_status) VALUES(1234567890123, '1', 'A', 2, 'todo')", &[]).unwrap();
                 match dbio.query_by_tableid("1".to_string()) {
                     Ok(res) => assert!(res.contains("table_id")),
                     Err(e) => panic!("[TEST::DBIO_QUERY_BY_TABLEID] Error: {}", e)
@@ -641,7 +640,7 @@ mod test {
                 client.execute("DELETE FROM tablet", &[]).unwrap();
                 client.execute("DELETE FROM items", &[]).unwrap();
                 client.execute("INSERT INTO tablet(timestamp, table_id, table_status) VALUES(1234567890123, '1', 'doing')", &[]).unwrap();
-                client.execute("INSERT INTO items(timestamp, table_id, item, amount, item_status, cook_time) VALUES(1234567890123, '1', 'A', 2, 'doing', 10)", &[]).unwrap();               
+                client.execute("INSERT INTO items(timestamp, table_id, item, amount, item_status) VALUES(1234567890123, '1', 'A', 2, 'doing')", &[]).unwrap();               
                 let order: DeleteOrder = DeleteOrder {
                     timestamp: 1234567890124,
                     table_id: "1".to_string(),
@@ -668,7 +667,7 @@ mod test {
                 client.execute("DELETE FROM tablet", &[]).unwrap();
                 client.execute("DELETE FROM items", &[]).unwrap();
                 client.execute("INSERT INTO tablet(timestamp, table_id, table_status) VALUES(1234567890123, '1', 'done')", &[]).unwrap();
-                client.execute("INSERT INTO items(timestamp, table_id, item, amount, item_status, cook_time) VALUES(1234567890123, '1', 'A', 2, 'done', 10)", &[]).unwrap();               
+                client.execute("INSERT INTO items(timestamp, table_id, item, amount, item_status) VALUES(1234567890123, '1', 'A', 2, 'done')", &[]).unwrap();               
                 let order: DeleteOrder = DeleteOrder {
                     timestamp: 1234567890124,
                     table_id: "1".to_string(),
@@ -695,7 +694,7 @@ mod test {
                 client.execute("DELETE FROM tablet", &[]).unwrap();
                 client.execute("DELETE FROM items", &[]).unwrap();
                 client.execute("INSERT INTO tablet(timestamp, table_id, table_status) VALUES(1234567890123, '1', 'todo')", &[]).unwrap();
-                client.execute("INSERT INTO items(timestamp, table_id, item, amount, item_status, cook_time) VALUES(1234567890123, '1', 'A', 2, 'todo', 10)", &[]).unwrap();               
+                client.execute("INSERT INTO items(timestamp, table_id, item, amount, item_status) VALUES(1234567890123, '1', 'A', 2, 'todo')", &[]).unwrap();               
                 let order: DeleteOrder = DeleteOrder {
                     timestamp: 1234567890124,
                     table_id: "1".to_string(),
@@ -745,7 +744,7 @@ mod test {
                 client.execute("DELETE FROM tablet", &[]).unwrap();
                 client.execute("DELETE FROM items", &[]).unwrap();
                 client.execute("INSERT INTO tablet(timestamp, table_id, table_status) VALUES(1234567890123, '1', 'done')", &[]).unwrap();
-                client.execute("INSERT INTO items(timestamp, table_id, item, amount, item_status, cook_time) VALUES(1234567890123, '1', 'A', 2, 'done', 10)", &[]).unwrap();               
+                client.execute("INSERT INTO items(timestamp, table_id, item, amount, item_status) VALUES(1234567890123, '1', 'A', 2, 'done')", &[]).unwrap();               
                 let order: UpdateOrder = UpdateOrder {
                     timestamp: 1234567890124,
                     table_id: "1".to_string(),
@@ -772,7 +771,7 @@ mod test {
                 client.execute("DELETE FROM tablet", &[]).unwrap();
                 client.execute("DELETE FROM items", &[]).unwrap();
                 client.execute("INSERT INTO tablet(timestamp, table_id, table_status) VALUES(1234567890123, '1', 'todo')", &[]).unwrap();
-                client.execute("INSERT INTO items(timestamp, table_id, item, amount, item_status, cook_time) VALUES(1234567890123, '1', 'A', 2, 'todo', 10)", &[]).unwrap();               
+                client.execute("INSERT INTO items(timestamp, table_id, item, amount, item_status) VALUES(1234567890123, '1', 'A', 2, 'todo')", &[]).unwrap();               
                 let order: UpdateOrder = UpdateOrder {
                     timestamp: 1234567890124,
                     table_id: "1".to_string(),
@@ -799,7 +798,7 @@ mod test {
                 client.execute("DELETE FROM tablet", &[]).unwrap();
                 client.execute("DELETE FROM items", &[]).unwrap();
                 client.execute("INSERT INTO tablet(timestamp, table_id, table_status) VALUES(1234567890123, '1', 'doing')", &[]).unwrap();
-                client.execute("INSERT INTO items(timestamp, table_id, item, amount, item_status, cook_time) VALUES(1234567890123, '1', 'A', 2, 'doing', 10)", &[]).unwrap();               
+                client.execute("INSERT INTO items(timestamp, table_id, item, amount, item_status) VALUES(1234567890123, '1', 'A', 2, 'doing')", &[]).unwrap();               
                 let order: UpdateOrder = UpdateOrder {
                     timestamp: 1234567890124,
                     table_id: "1".to_string(),
@@ -851,7 +850,7 @@ mod test {
                 client.execute("DELETE FROM tablet", &[]).unwrap();
                 client.execute("DELETE FROM items", &[]).unwrap();
                 client.execute("INSERT INTO tablet(timestamp, table_id, table_status) VALUES(1234567890123, '1', 'todo')", &[]).unwrap();
-                client.execute("INSERT INTO items(timestamp, table_id, item, amount, item_status, cook_time) VALUES(1234567890123, '1', 'A', 2, 'todo', 10)", &[]).unwrap();               
+                client.execute("INSERT INTO items(timestamp, table_id, item, amount, item_status) VALUES(1234567890123, '1', 'A', 2, 'todo')", &[]).unwrap();               
                 let order: PlaceOrder = PlaceOrder {
                     timestamp: 1234567890124,
                     table_id: "1".to_string(),
@@ -878,7 +877,7 @@ mod test {
                 client.execute("DELETE FROM tablet", &[]).unwrap();
                 client.execute("DELETE FROM items", &[]).unwrap();
                 client.execute("INSERT INTO tablet(timestamp, table_id, table_status) VALUES(1234567890123, '1', 'doing')", &[]).unwrap();
-                client.execute("INSERT INTO items(timestamp, table_id, item, amount, item_status, cook_time) VALUES(1234567890123, '1', 'A', 2, 'doing', 10)", &[]).unwrap();               
+                client.execute("INSERT INTO items(timestamp, table_id, item, amount, item_status) VALUES(1234567890123, '1', 'A', 2, 'doing')", &[]).unwrap();               
                 let order: PlaceOrder = PlaceOrder {
                     timestamp: 1234567890124,
                     table_id: "1".to_string(),
@@ -905,7 +904,7 @@ mod test {
                 client.execute("DELETE FROM tablet", &[]).unwrap();
                 client.execute("DELETE FROM items", &[]).unwrap();
                 client.execute("INSERT INTO tablet(timestamp, table_id, table_status) VALUES(1234567890123, '1', 'done')", &[]).unwrap();
-                client.execute("INSERT INTO items(timestamp, table_id, item, amount, item_status, cook_time) VALUES(1234567890123, '1', 'A', 2, 'done', 10)", &[]).unwrap();               
+                client.execute("INSERT INTO items(timestamp, table_id, item, amount, item_status) VALUES(1234567890123, '1', 'A', 2, 'done')", &[]).unwrap();               
                 let order: PlaceOrder = PlaceOrder {
                     timestamp: 1234567890124,
                     table_id: "1".to_string(),
