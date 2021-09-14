@@ -3,6 +3,7 @@ use crate::settings::Settings;
 use crate::tablet::Tablet;
 
 use async_trait::async_trait;
+use chrono::Utc;
 use rand::Rng;
 use reqwest::Client;
 use reqwest::Error;
@@ -95,7 +96,7 @@ impl Tablet for Staff {
     async fn place_order(&self, table_id: String, items: Vec<ItemPair>) -> Result<(), Error> {
         let id = table_id.clone();
         let order: PlaceOrder = PlaceOrder {
-            timestamp: timestamp(),
+            created_at: Utc::now(),
             table_id: table_id,
             items: items,
         };
@@ -122,7 +123,7 @@ impl Tablet for Staff {
     async fn delete_order(&self, table_id: String, item: String) -> Result<(), Error> {
         let id = table_id.clone();
         let order: DeleteOrder = DeleteOrder {
-            timestamp: timestamp(),
+            deleted_at: Utc::now(),
             table_id: table_id,
             item: item,
         };
@@ -149,7 +150,7 @@ impl Tablet for Staff {
     async fn update_order(&self, table_id: String, items: Vec<ItemPair>) -> Result<(), Error> {
         let id = table_id.clone();
         let order: UpdateOrder = UpdateOrder {
-            timestamp: timestamp(),
+            updated_at: Utc::now(),
             table_id: table_id,
             items: items,
         };
@@ -312,7 +313,8 @@ mod tests {
     }
 
     #[test]
-    fn test_generate_items_given_at_least_one_rand_num_provided_when_invoked_then_vec_len_greater_than_zero() {
+    fn test_generate_items_given_at_least_one_rand_num_provided_when_invoked_then_vec_len_greater_than_zero(
+    ) {
         let res: Vec<ItemPair> = generate_items();
         assert!(res.len() > 0);
     }
