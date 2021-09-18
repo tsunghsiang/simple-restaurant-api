@@ -1,7 +1,10 @@
 use chrono::{DateTime, Utc};
 use num_enum::IntoPrimitive;
 use num_enum::TryFromPrimitive;
+use postgres_types;
 use serde::{Deserialize, Serialize};
+use std::string::ToString;
+use strum_macros::Display;
 
 #[derive(Debug, Eq, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(i8)]
@@ -11,6 +14,28 @@ pub enum ReqType {
     Update = 2,
     StatusAll = 3,  // show all items for a specific table
     StatusItem = 4, // show specific item for a specified table
+}
+
+#[derive(Display, Debug, ToSql, FromSql)]
+#[postgres(name = "tablestatus")]
+pub enum TableStatus {
+    #[postgres(name = "Open")]
+    Open,
+    #[postgres(name = "Close")]
+    Close,
+}
+
+#[derive(Display, Debug, ToSql, FromSql)]
+#[postgres(name = "itemstatus")]
+pub enum ItemStatus {
+    #[postgres(name = "New")]
+    New,
+    #[postgres(name = "Process")]
+    Process,
+    #[postgres(name = "Done")]
+    Done,
+    #[postgres(name = "Deleted")]
+    Deleted,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -16,6 +16,11 @@ use std::process;
 use std::sync::Mutex;
 use std::{thread, time};
 
+#[macro_use]
+extern crate postgres;
+#[macro_use]
+extern crate postgres_derive;
+
 struct Signal {
     terminate: bool,
 }
@@ -57,7 +62,7 @@ async fn main() -> tide::Result<()> {
         }
     };
 
-    ctrlc::set_handler(error_handler).expect("Error setting Ctrl-C handler");
+    //ctrlc::set_handler(error_handler).expect("Error setting Ctrl-C handler");
     tide::log::start();
 
     /* simple api processing here */
@@ -79,6 +84,7 @@ async fn main() -> tide::Result<()> {
     Ok(())
 }
 
+/*
 fn error_handler() {
     println!("[TERMINATION] Received signal to terminate the server!");
     /* Waiting incomplete requests to be done */
@@ -104,7 +110,7 @@ fn error_handler() {
     println!("[TERMINATION] Fully served! Server terminated.");
     process::exit(0);
 }
-
+*/
 fn is_auth(req: &tide::Request<()>) -> bool {
     (match req.header("X-Auth-Username") {
         Some(name) => {
@@ -175,13 +181,14 @@ async fn add_by_tableid_and_item(mut req: tide::Request<()>) -> tide::Result {
     if !terminated {
         if is_auth(&req) {
             let order: PlaceOrder = req.body_json().await?;
-            let command: Dbio = Dbio::new();
-            let mut res: String = "".to_string();
-            match command.place(order) {
-                Ok(result) => res = result,
-                _ => {}
-            };
-            Ok(res.into())
+            //    let command: Dbio = Dbio::new();
+            //    let mut res: String = "".to_string();
+            //    match command.place(order) {
+            //        Ok(result) => res = result,
+            //        _ => {}
+            //    };
+            //    Ok(res.into())
+            Ok(order.disp().into())
         } else {
             Ok("Un-authorized place order".into())
         }
@@ -195,13 +202,14 @@ async fn remove_by_tableid_and_item(mut req: tide::Request<()>) -> tide::Result 
     if !terminated {
         if is_auth(&req) {
             let order: DeleteOrder = req.body_json().await?;
-            let command: Dbio = Dbio::new();
-            let mut res: String = "".to_string();
-            match command.delete(order) {
-                Ok(result) => res = result,
-                _ => {}
-            };
-            Ok(res.into())
+            //let command: Dbio = Dbio::new();
+            //let mut res: String = "".to_string();
+            //match command.delete(order) {
+            //    Ok(result) => res = result,
+            //    _ => {}
+            //};
+            //Ok(res.into())
+            Ok(order.disp().into())
         } else {
             Ok("Un-authorized delete order".into())
         }
@@ -215,13 +223,14 @@ async fn update_by_tableid_and_item(mut req: tide::Request<()>) -> tide::Result 
     if !terminated {
         if is_auth(&req) {
             let order: UpdateOrder = req.body_json().await?;
-            let command: Dbio = Dbio::new();
-            let mut res: String = "".to_string();
-            match command.update(order) {
-                Ok(result) => res = result,
-                _ => {}
-            };
-            Ok(res.into())
+            //let command: Dbio = Dbio::new();
+            //let mut res: String = "".to_string();
+            //match command.update(order) {
+            //    Ok(result) => res = result,
+            //    _ => {}
+            //};
+            //Ok(res.into())
+            Ok(order.disp().into())
         } else {
             Ok("Un-authorized update order".into())
         }

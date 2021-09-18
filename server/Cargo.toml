@@ -27,3 +27,4 @@ sha256 = "1.0.2"
 strum = "0.21"
 strum_macros = "0.21"
 chrono = "0.4.10"
+uuid = { version = "0.8", features = ["serde", "v4"]}
