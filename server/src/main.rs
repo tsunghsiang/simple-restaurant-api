@@ -202,14 +202,13 @@ async fn remove_by_tableid_and_item(mut req: tide::Request<()>) -> tide::Result 
     if !terminated {
         if is_auth(&req) {
             let order: DeleteOrder = req.body_json().await?;
-            //let command: Dbio = Dbio::new();
-            //let mut res: String = "".to_string();
-            //match command.delete(order) {
-            //    Ok(result) => res = result,
-            //    _ => {}
-            //};
-            //Ok(res.into())
-            Ok(order.disp().into())
+            let command: Dbio = Dbio::new();
+            let mut res: String = "".to_string();
+            match command.delete(order) {
+                Ok(result) => res = result,
+                _ => {}
+            };
+            Ok(res.into())
         } else {
             Ok("Un-authorized delete order".into())
         }

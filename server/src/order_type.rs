@@ -16,7 +16,7 @@ pub enum ReqType {
     StatusItem = 4, // show specific item for a specified table
 }
 
-#[derive(Display, Debug, ToSql, FromSql)]
+#[derive(Display, Debug, ToSql, FromSql, PartialEq)]
 #[postgres(name = "tablestatus")]
 pub enum TableStatus {
     #[postgres(name = "Open")]
@@ -25,7 +25,7 @@ pub enum TableStatus {
     Close,
 }
 
-#[derive(Display, Debug, ToSql, FromSql)]
+#[derive(Display, Debug, ToSql, FromSql, PartialEq)]
 #[postgres(name = "itemstatus")]
 pub enum ItemStatus {
     #[postgres(name = "New")]

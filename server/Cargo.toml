@@ -16,7 +16,7 @@ rand = "0.8.4"
 num_enum = "0.5.4"
 concurrent-queue = "1.2.2"
 time = "0.1"
-postgres = "0.19.1"
+postgres = {version = "0.19.1", features = ["with-chrono-0_4"]}
 postgres-derive = "0.4.0"
 postgres-types = "0.2.1"
 futures = "0.3.17"
