@@ -7,7 +7,6 @@ use postgres::{Client, Error, NoTls};
 use rand::Rng;
 use std::thread;
 use std::time::{Duration, Instant};
-use uuid::Uuid;
 
 pub struct Dbio {
     name: String,
@@ -107,62 +106,66 @@ impl DB for Dbio {
 
         Ok(())
     }
-  /*  
-        fn place(&self, order: PlaceOrder) -> Result<String, Error> {
-            let mut client = Client::connect(self.get_db_path(), NoTls)?;
-            let mut res: String = "".to_string();
+  
+    fn place(&self, order: PlaceOrder) -> Result<String, Error> {
+        let mut client = Client::connect(self.get_db_path(), NoTls)?;
+        let mut res: String = "".to_string();
 
-            match client.query_one("SELECT timestamp,
-                                           table_id,
-                                           table_status
-                                           FROM tablet WHERE table_id = $1 AND timestamp = (SELECT MAX(timestamp)
-                                                                                            FROM tablet
-                                                                                            WHERE table_id = $2) FOR UPDATE", &[&order.table_id, &order.table_id]) {
-                Ok(row) => {
-                    let table_id: String = row.get(1);
-                    let table_status: String = row.get(2);
+        match client.query_one("SELECT table_id, status
+                                FROM tablet WHERE table_id = $1 AND opened_at = (SELECT MAX(opened_at)
+                                                                                 FROM tablet
+                                                                                 WHERE table_id = $1) FOR UPDATE", &[&order.table_id]) {
+            Ok(row) => {
+                let table_id: String = row.get(0);
+                let status: TableStatus = row.get(1);
 
-                    if table_status.eq("todo") {
-                        res = format!("Duplicated! There has been an order of table_id: {}, waiting in the queue", table_id);
-                    } else if table_status.eq("doing") {
-                        res = format!("Duplicated! There has been an order of table_id: {}, cooking in the kitchen", table_id);
-                    } else if table_status.eq("done") {
-                        res = format!("New Order! timestamp: {}, table_id: {}", order.timestamp, order.table_id);
+                match status {
+                    TableStatus::Open => res = format!("Duplicated! There has been an order of table_id: {}, being served in the queue", table_id),
+                    TableStatus::Close => {
+                        res = format!("New Order! opened_at: {}, table_id: {}", order.created_at, order.table_id);
                         // insert new order into table 'tablet'
-                        client.execute("INSERT INTO tablet(timestamp, table_id, table_status) VALUES ($1, $2, 'todo')", &[&order.timestamp, &order.table_id])?;
-                        // insert new items into table 'items'
+                        client.execute("INSERT INTO tablet(opened_at, table_id, status) VALUES ($1, $2, $3)", &[&order.created_at, &order.table_id, &TableStatus::Open])?;
+                        // insert new items into table items/item_history
                         let mut rng = rand::thread_rng();
-
                         for elem in order.items {
-                            let (ts, table_id, item, amount, status, cook_time) = (order.timestamp, order.table_id.to_string(), elem.name, elem.amount, "'todo'".to_string(), rng.gen_range(5..16));
-                            client.execute("INSERT INTO items(timestamp, table_id, item, amount, item_status) VALUES ($1, $2, $3, $4, $5)",
-                                            &[&ts, &table_id, &item, &amount, &status])?;
+                            let (ts, table_id, item, amount, cook_time) = (order.created_at, order.table_id.to_string(), elem.name, elem.amount, rng.gen_range(5..16));
+                            client.execute("INSERT INTO items(created_at, updated_at, table_id, item, amount, status) VALUES ($1, $1, $2, $3, $4, 'Process'::itemstatus)",
+                                            &[&ts, &table_id, &item, &amount])?;
+                            client.execute("INSERT INTO item_history(created_at, updated_at, table_id, item, amount, status) VALUES ($1, $1, $2, $3, $4, 'New'::itemstatus)",
+                                            &[&ts, &table_id, &item, &amount])?;
+                            client.execute("INSERT INTO item_history(created_at, updated_at, table_id, item, amount, status) VALUES ($1, $1, $2, $3, $4, 'Process'::itemstatus)",
+                                            &[&ts, &table_id, &item, &amount])?;
                             // spawn a task handling item preparation
-                            thread::spawn(move || block_on(cook_order_item(ts, &table_id.to_string(), &item.to_string(), cook_time)));
-                        }
-                    }
-                },
-                Err(_err) => {
-                    res = format!("New Order! timestamp: {}, table_id: {}", order.timestamp, order.table_id);
-                    // insert new order into table 'tablet'
-                    client.execute("INSERT INTO tablet(timestamp, table_id, table_status) VALUES ($1, $2, 'todo')", &[&order.timestamp, &order.table_id])?;
-
-                    // insert new items into table 'items'
-                    let mut rng = rand::thread_rng();
-                    for elem in order.items {
-                        let (ts, table_id, item, amount, status, cook_time) = (order.timestamp, order.table_id.to_string(), elem.name, elem.amount, "'todo'".to_string(), rng.gen_range(5..16));
-                        client.execute("INSERT INTO items(timestamp, table_id, item, amount, item_status) VALUES ($1, $2, $3, $4, $5)",
-                                        &[&ts, &table_id, &item, &amount, &status])?;
-                        // spawn a task handling item preparation
-                        thread::spawn(move || block_on(cook_order_item(ts, &table_id.to_string(), &item.to_string(), cook_time)));
+                            let elm = ItemPair{ name: item, amount: amount };
+                            thread::spawn(move || cook_order_item(ts.to_string(), table_id, elm, cook_time));
+                        }                       
                     }
                 }
+            },
+            Err(_err) => {
+                res = format!("New Order! opened_at_at: {}, table_id: {}", order.created_at, order.table_id);
+                // insert new order into table 'tablet'
+                client.execute("INSERT INTO tablet(opened_at, table_id, status) VALUES ($1, $2, $3)", &[&order.created_at, &order.table_id, &TableStatus::Open])?;
+                // insert new items into table items/item_history
+                let mut rng = rand::thread_rng();
+                for elem in order.items {
+                    let (ts, table_id, item, amount, cook_time) = (order.created_at, order.table_id.to_string(), elem.name, elem.amount, rng.gen_range(5..16));
+                    client.execute("INSERT INTO items(created_at, updated_at, table_id, item, amount, status) VALUES ($1, $1, $2, $3, $4, 'Process'::itemstatus)",
+                                    &[&ts, &table_id, &item, &amount])?;
+                    client.execute("INSERT INTO item_history(created_at, updated_at, table_id, item, amount, status) VALUES ($1, $1, $2, $3, $4, 'New'::itemstatus)",
+                                    &[&ts, &table_id, &item, &amount])?;
+                    client.execute("INSERT INTO item_history(created_at, updated_at, table_id, item, amount, status) VALUES ($1, $1, $2, $3, $4, 'Process'::itemstatus)",
+                                    &[&ts, &table_id, &item, &amount])?;
+                    // spawn a task handling item preparation
+                    let elm = ItemPair{ name: item, amount: amount };
+                    thread::spawn(move || cook_order_item(ts.to_string(), table_id, elm, cook_time));
+                }
             }
-
-            Ok(res.into())
         }
- */   
 
+        Ok(res.into())
+    }
+  
     fn update(&self, order: UpdateOrder) -> Result<String, Error> {
         let mut client = Client::connect(self.get_db_path(), NoTls).unwrap();
         let mut res: String = "".to_string();
@@ -353,8 +356,10 @@ fn update_table_status(mut client: Client, table_id: String, ts: String) -> Resu
     let mut open = false;
 
     for row in client.query(
-        "SELECT status FROM items WHERE table_id = $1 AND created_at = to_timestamp($2, 'YYYY-MM-DD HH24:MI:SS') FOR UPDATE",
-        &[&table_id, &ts],
+        "SELECT status FROM items WHERE table_id = $1 AND created_at = (SELECT MAX(opened_at)
+                                                                        FROM tablet
+                                                                        WHERE table_id = $1) FOR UPDATE",
+        &[&table_id],
     )? {
         empty = false;
         let status: ItemStatus = row.get(0);
@@ -370,8 +375,10 @@ fn update_table_status(mut client: Client, table_id: String, ts: String) -> Resu
         client.execute("UPDATE tablet 
                         SET closed_at = now(),
                             status = 'Close'::tablestatus
-                        WHERE table_id = $1 AND opened_at = to_timestamp($2, 'YYYY-MM-DD HH24:MI:SS')",
-            &[&table_id, &ts],
+                        WHERE table_id = $1 AND opened_at = (SELECT MAX(opened_at)
+                                                             FROM tablet
+                                                             WHERE table_id = $1)",
+            &[&table_id],
         )?;
         ()
     }
@@ -379,40 +386,51 @@ fn update_table_status(mut client: Client, table_id: String, ts: String) -> Resu
     if open {
         client.execute(
             "UPDATE tablet
-                        SET status = 'Open'::tablestatus
-                        WHERE table_id = $1 and opened_at = to_timestamp($2, 'YYYY-MM-DD HH24:MI:SS')",
-            &[&table_id, &ts],
+             SET status = 'Open'::tablestatus
+             WHERE table_id = $1 and opened_at = (SELECT MAX(opened_at)
+                                                  FROM tablet
+                                                  WHERE table_id = $1)",
+            &[&table_id],
         )?;
     } else {
         client.execute(
             "UPDATE tablet
-                        SET closed_at = now(),
-                            status = 'Close'::tablestatus
-                        WHERE table_id = $1 and opened_at = to_timestamp($2, 'YYYY-MM-DD HH24:MI:SS')",
-            &[&table_id, &ts],
+             SET closed_at = now(),
+             status = 'Close'::tablestatus
+             WHERE table_id = $1 and opened_at = (SELECT MAX(opened_at)
+                                                  FROM tablet
+                                                  WHERE table_id = $1)",
+            &[&table_id],
         )?;
     }
 
     Ok(())
 }
 
-async fn update_order_item(opened_at: String, updated_at: String, table_id: String, elem: ItemPair) {
+fn update_order_item(opened_at: String, updated_at: String, table_id: String, elem: ItemPair) {
     let command: Dbio = Dbio::new();
     let mut client = Client::connect(command.get_db_path(), NoTls).unwrap();
     let mut res: String = "".to_string();
     match client.query_one("SELECT created_at, table_id, item, amount, status
                             FROM items
-                            WHERE table_id = $1 AND item = $2 AND created_at = to_timestamp($3, 'YYYY-MM-DD HH24:MI:SS') FOR UPDATE", &[&table_id, &elem.name, &opened_at]) {
+                            WHERE table_id = $1 AND item = $2 AND created_at = (SELECT MAX(opened_at)
+                                                                                FROM tablet
+                                                                                WHERE table_id = $1) FOR UPDATE", &[&table_id, &elem.name]) {
         Ok(row) => {
             let status: ItemStatus = row.get("status");
-            
+            let amount: i32 = row.get("amount");
+
             match status {
                 ItemStatus::New => {
                     client.execute("UPDATE items
-                                    SET updated_at = to_timestamp($1, 'YYYY-MM-DD HH24:MI:SS',
-                                        amount = $2
-                                    WHERE table_id = $3 AND item = $4 AND created_at = to_timestamp($5, 'YYYY-MM-DD HH24:MI:SS'))", &[&updated_at, &elem.amount, &table_id, &elem.name, &opened_at]).unwrap();
-                    client.execute("INSERT INTO item_history(created_at, updated_at, table_id, item, ammount, 'New'::itemstatus)", &[&opened_at, &updated_at, &table_id, &elem.name, &elem.amount]).unwrap();
+                                    SET updated_at = to_timestamp($1, 'YYYY-MM-DD HH24:MI:SS'),
+                                    amount = $2
+                                    WHERE table_id = $3 AND item = $4 AND created_at = (SELECT MAX(opened_at)
+                                                                                        FROM tablet
+                                                                                        WHERE table_id = $3))", &[&updated_at, &elem.amount, &table_id, &elem.name]).unwrap();
+                    client.execute("INSERT INTO item_history(created_at, updated_at, table_id, item, ammount, status)
+                                    VALUES(to_timestamp($1, 'YYYY-MM-DD HH24:MI:SS'), to_timestamp($2, 'YYYY-MM-DD HH24:MI:SS'), $3, $4, $5, $6)", &[&opened_at, &updated_at, &table_id, &elem.name, &elem.amount, &ItemStatus::New]).unwrap();
+                    res = format!("Updat Item Successed! The item: {} of table_id: {} amount: {} -> {}", elem.name, table_id, amount, elem.amount);
                 },
                 ItemStatus::Process => res = format!("Update Item Failed! The item: {} of table_id :{} is cooking", elem.name, table_id),
                 ItemStatus::Done => res = format!("Update Item Failed! The item: {} of table_id: {} was done", elem.name, table_id), 
@@ -422,13 +440,15 @@ async fn update_order_item(opened_at: String, updated_at: String, table_id: Stri
         Err(_err) => {
             let mut rng = rand::thread_rng();
             let cook_time: u64 = rng.gen_range(5..16);
-            res = format!("Update Item Successed! New item: {} added to the table_id: {}\n", elem.name, table_id);
+            res = format!("Update Item Successed! New item: {} added to the table_id: {}", elem.name, table_id);
             // spawn a task handling item preparation
             std::thread::spawn(move || {
                 let mut duration: Duration;
                 // Start preparing food 
                 client.execute("INSERT INTO items(created_at, updated_at, table_id, item, amount, status)
                                 VALUES(to_timestamp($1, 'YYYY-MM-DD HH24:MI:SS'), to_timestamp($2, 'YYYY-MM-DD HH24:MI:SS'), $3, $4, $5, 'Process'::itemstatus)", &[&opened_at, &updated_at, &table_id, &elem.name, &elem.amount]).unwrap();
+                client.execute("INSERT INTO item_history(created_at, updated_at, table_id, item, amount, status)
+                                VALUES(to_timestamp($1, 'YYYY-MM-DD HH24:MI:SS'), to_timestamp($2, 'YYYY-MM-DD HH24:MI:SS'), $3, $4, $5, 'New'::itemstatus)", &[&opened_at, &updated_at, &table_id, &elem.name, &elem.amount]).unwrap();               
                 client.execute("INSERT INTO item_history(created_at, updated_at, table_id, item, amount, status)
                                 VALUES(to_timestamp($1, 'YYYY-MM-DD HH24:MI:SS'), to_timestamp($2, 'YYYY-MM-DD HH24:MI:SS'), $3, $4, $5, 'Process'::itemstatus)", &[&opened_at, &updated_at, &table_id, &elem.name, &elem.amount]).unwrap();               
                 let start = Instant::now(); 
@@ -440,7 +460,7 @@ async fn update_order_item(opened_at: String, updated_at: String, table_id: Stri
         }
     }
 
-    println!("{}", res);
+    // println!("{}", res);
 }
 
 fn update_item_status(created_at: String, updated_at: String, table_id: String, elem: ItemPair, to: ItemStatus) {
@@ -449,8 +469,9 @@ fn update_item_status(created_at: String, updated_at: String, table_id: String, 
     match client.execute("UPDATE items
                           SET updated_at = to_timestamp($1, 'YYYY-MM-DD HH24:MI:SS'),
                               status = $2
-                          WHERE created_at = to_timestamp($3, 'YYYY-MM-DD HH24:MI:SS') AND table_id = $4 AND item = $5", &[&updated_at, &to, &created_at, &table_id, &elem.name]) {
-        Ok(_) => {
+                          WHERE table_id = $3 AND item = $4 AND created_at = (SELECT MAX(opened_at) FROM tablet WHERE table_id = $3)", &[&updated_at, &to, &table_id, &elem.name]) {
+        Ok(_n) => {
+            // println!("[UPDATE_ITEM_STATUS] {} rows modified", n);
             client.execute("INSERT INTO item_history(created_at, updated_at, table_id, item, amount, status)
                             VALUES(to_timestamp($1, 'YYYY-MM-DD HH24:MI:SS'), to_timestamp($2, 'YYYY-MM-DD HH24:MI:SS'), $3, $4, $5, $6)", &[&created_at, &updated_at, &table_id, &elem.name, &elem.amount, &to]).unwrap();
         },
@@ -462,13 +483,15 @@ fn update_item_status(created_at: String, updated_at: String, table_id: String, 
     };
 }
 
-/*
-async fn cook_order_item(timestamp: i64, table_id: &str, item: &str, cook_time: i32) {
-    update_item_status(timestamp, table_id.to_string(), item.to_string(), "doing".to_string());
-    thread::sleep(Duration::from_millis((cook_time * 1000) as u64));
-    update_item_status(timestamp, table_id.to_string(), item.to_string(), "done".to_string());
+fn cook_order_item(ts: String, table_id: String, elem: ItemPair, cook_time: u64) {
+    // println!("[COOK][START] table_id: {} item: {} cook_time: {} secs", table_id, elem.name, cook_time);
+    let start = Instant::now();
+    while start.elapsed().as_secs() < cook_time {
+        // println!("wait...");
+    }
+    let done_at: String = Utc::now().to_string();
+    update_item_status(ts, done_at, table_id, elem, ItemStatus::Done);
 }
-*/
 
 #[cfg(test)]
 mod test {
@@ -1290,138 +1313,98 @@ mod test {
             Err(e) => panic!("[TEST::DBIO_UPDATE] Should not panic: {}", e)
         };
     }
-/*
-        #[test]
-        fn test_dbio_update_given_table_status_doing_when_update_then_result_contains_successed_string_literal() {
-            let dbio:Dbio = Dbio::new();
-            let mut client: Client = Client::connect(dbio.get_db_path(), NoTls).unwrap();
-            match dbio.init() {
-                Ok(()) => {
-                    // Clean both tablet/items tables
-                    client.execute("DELETE FROM tablet", &[]).unwrap();
-                    client.execute("DELETE FROM items", &[]).unwrap();
-                    client.execute("INSERT INTO tablet(timestamp, table_id, table_status) VALUES(1234567890123, '1', 'doing')", &[]).unwrap();
-                    client.execute("INSERT INTO items(timestamp, table_id, item, amount, item_status) VALUES(1234567890123, '1', 'A', 2, 'doing')", &[]).unwrap();
-                    let order: UpdateOrder = UpdateOrder {
-                        timestamp: 1234567890124,
-                        table_id: "1".to_string(),
-                        items: vec![ItemPair{name: "A".to_string(), amount: 8}]
-                    };
-                    match dbio.update(order) {
-                        Ok(res) => assert!(res.contains("Successed")),
-                        Err(e) => panic!("[TEST::DBIO_UPDATE] Error: {}", e)
-                    }
-                    client.execute("DELETE FROM tablet", &[]).unwrap();
-                    client.execute("DELETE FROM items", &[]).unwrap();
-                },
-                Err(e) => panic!("[TEST::DBIO_UPDATE] Should not panic: {}", e)
-            };
-        }
 
-        #[test]
-        fn test_dbio_place_given_no_previous_row_when_place_then_result_contains_new_string_literal() {
-            let dbio:Dbio = Dbio::new();
-            let mut client: Client = Client::connect(dbio.get_db_path(), NoTls).unwrap();
-            match dbio.init() {
-                Ok(()) => {
-                    // Clean both tablet/items tables
-                    client.execute("DELETE FROM tablet", &[]).unwrap();
-                    client.execute("DELETE FROM items", &[]).unwrap();
-                    let order: PlaceOrder = PlaceOrder {
-                        timestamp: 1234567890124,
-                        table_id: "1".to_string(),
-                        items: vec![ItemPair{name: "A".to_string(), amount: 8}]
-                    };
-                    match dbio.place(order) {
-                        Ok(res) => assert!(res.contains("New")),
-                        Err(e) => panic!("[TEST::DBIO_PLACE] Error: {}", e)
-                    }
-                    client.execute("DELETE FROM tablet", &[]).unwrap();
-                    client.execute("DELETE FROM items", &[]).unwrap();
-                },
-                Err(e) => panic!("[TEST::DBIO_PLACE] Should not panic: {}", e)
-            };
-        }
+    #[test]
+    fn test_dbio_place_given_no_previous_row_when_place_then_result_contains_new_string_literal() {
+        let dbio:Dbio = Dbio::new();
+        let mut client: Client = Client::connect(dbio.get_db_path(), NoTls).unwrap();
+        match dbio.init() {
+            Ok(()) => {
+                client.execute("DELETE FROM tablet", &[]).unwrap();
+                client.execute("DELETE FROM items", &[]).unwrap();
+                client.execute("DELETE FROM item_history", &[]).unwrap();
 
-        #[test]
-        fn test_dbio_place_given_previous_row_exists_and_table_status_todo_when_place_result_contains_duplicated_string_literal() {
-            let dbio:Dbio = Dbio::new();
-            let mut client: Client = Client::connect(dbio.get_db_path(), NoTls).unwrap();
-            match dbio.init() {
-                Ok(()) => {
-                    // Clean both tablet/items tables
-                    client.execute("DELETE FROM tablet", &[]).unwrap();
-                    client.execute("DELETE FROM items", &[]).unwrap();
-                    client.execute("INSERT INTO tablet(timestamp, table_id, table_status) VALUES(1234567890123, '1', 'todo')", &[]).unwrap();
-                    client.execute("INSERT INTO items(timestamp, table_id, item, amount, item_status) VALUES(1234567890123, '1', 'A', 2, 'todo')", &[]).unwrap();
-                    let order: PlaceOrder = PlaceOrder {
-                        timestamp: 1234567890124,
-                        table_id: "1".to_string(),
-                        items: vec![ItemPair{name: "B".to_string(), amount: 8}]
-                    };
-                    match dbio.place(order) {
-                        Ok(res) => assert!(res.contains("Duplicated")),
-                        Err(e) => panic!("[TEST::DBIO_PLACE] Error: {}", e)
-                    }
-                    client.execute("DELETE FROM tablet", &[]).unwrap();
-                    client.execute("DELETE FROM items", &[]).unwrap();
-                },
-                Err(e) => panic!("[TEST::DBIO_PLACE] Should not panic: {}", e)
-            };
-        }
+                let order: PlaceOrder = PlaceOrder {
+                    created_at: Utc::now(),
+                    table_id: "1".to_string(),
+                    items: vec![ItemPair{name: "A".to_string(), amount: 8}]
+                };
 
-        #[test]
-        fn test_dbio_place_given_previous_row_exists_and_table_status_doing_when_place_result_contains_duplicated_string_literal() {
-            let dbio:Dbio = Dbio::new();
-            let mut client: Client = Client::connect(dbio.get_db_path(), NoTls).unwrap();
-            match dbio.init() {
-                Ok(()) => {
-                    // Clean both tablet/items tables
-                    client.execute("DELETE FROM tablet", &[]).unwrap();
-                    client.execute("DELETE FROM items", &[]).unwrap();
-                    client.execute("INSERT INTO tablet(timestamp, table_id, table_status) VALUES(1234567890123, '1', 'doing')", &[]).unwrap();
-                    client.execute("INSERT INTO items(timestamp, table_id, item, amount, item_status) VALUES(1234567890123, '1', 'A', 2, 'doing')", &[]).unwrap();
-                    let order: PlaceOrder = PlaceOrder {
-                        timestamp: 1234567890124,
-                        table_id: "1".to_string(),
-                        items: vec![ItemPair{name: "B".to_string(), amount: 8}]
-                    };
-                    match dbio.place(order) {
-                        Ok(res) => assert!(res.contains("Duplicated")),
-                        Err(e) => panic!("[TEST::DBIO_PLACE] Error: {}", e)
-                    }
-                    client.execute("DELETE FROM tablet", &[]).unwrap();
-                    client.execute("DELETE FROM items", &[]).unwrap();
-                },
-                Err(e) => panic!("[TEST::DBIO_PLACE] Should not panic: {}", e)
-            };
-        }
+                match dbio.place(order) {
+                    Ok(res) => assert!(res.contains("New")),
+                    Err(e) => panic!("[TEST::DBIO_PLACE] Error: {}", e)
+                }
+            },
+            Err(e) => panic!("[TEST::DBIO_PLACE] Should not panic: {}", e)
+        }          
+    }
 
-        #[test]
-        fn test_dbio_place_given_previous_row_exists_and_table_status_done_when_place_result_contains_new_string_literal() {
-            let dbio:Dbio = Dbio::new();
-            let mut client: Client = Client::connect(dbio.get_db_path(), NoTls).unwrap();
-            match dbio.init() {
-                Ok(()) => {
-                    // Clean both tablet/items tables
-                    client.execute("DELETE FROM tablet", &[]).unwrap();
-                    client.execute("DELETE FROM items", &[]).unwrap();
-                    client.execute("INSERT INTO tablet(timestamp, table_id, table_status) VALUES(1234567890123, '1', 'done')", &[]).unwrap();
-                    client.execute("INSERT INTO items(timestamp, table_id, item, amount, item_status) VALUES(1234567890123, '1', 'A', 2, 'done')", &[]).unwrap();
-                    let order: PlaceOrder = PlaceOrder {
-                        timestamp: 1234567890124,
-                        table_id: "1".to_string(),
-                        items: vec![ItemPair{name: "B".to_string(), amount: 8}]
-                    };
-                    match dbio.place(order) {
-                        Ok(res) => assert!(res.contains("New")),
-                        Err(e) => panic!("[TEST::DBIO_PLACE] Error: {}", e)
-                    }
-                    client.execute("DELETE FROM tablet", &[]).unwrap();
-                    client.execute("DELETE FROM items", &[]).unwrap();
-                },
-                Err(e) => panic!("[TEST::DBIO_PLACE] Should not panic: {}", e)
-            };
-        }
-    */
+    #[test]
+    fn test_dbio_place_given_previous_row_exists_and_table_status_open_when_place_result_contains_duplicated_string_literal() {
+        let dbio:Dbio = Dbio::new();
+        let mut client: Client = Client::connect(dbio.get_db_path(), NoTls).unwrap();
+        match dbio.init() {
+            Ok(()) => {
+                client.execute("DELETE FROM tablet", &[]).unwrap();
+                client.execute("DELETE FROM items", &[]).unwrap();
+                client.execute("DELETE FROM item_history", &[]).unwrap();
+                
+                let opened_at: String = Utc::now().to_string();
+                client.execute("INSERT INTO tablet(opened_at, table_id, status) VALUES(to_timestamp($1, 'YYYY-MM-DD HH24:MI:SS'), '1', $2)", &[&opened_at, &TableStatus::Open]).unwrap();
+                client.execute("INSERT INTO items(created_at, updated_at, table_id, item, amount, status) VALUES(to_timestamp($1, 'YYYY-MM-DD HH24:MI:SS'), to_timestamp($1, 'YYYY-MM-DD HH24:MI:SS'), '1', 'A', 2, $2)", &[&opened_at, &ItemStatus::New]).unwrap();
+                client.execute("INSERT INTO item_history(created_at, updated_at, table_id, item, amount, status) VALUES(to_timestamp($1, 'YYYY-MM-DD HH24:MI:SS'), to_timestamp($1, 'YYYY-MM-DD HH24:MI:SS'), '1', 'A', 2, $2)", &[&opened_at, &ItemStatus::New]).unwrap();
+                
+                let order: PlaceOrder = PlaceOrder {
+                    created_at: Utc::now(),
+                    table_id: "1".to_string(),
+                    items: vec![ItemPair{name: "B".to_string(), amount: 8}]
+                };
+                    
+                match dbio.place(order) {
+                    Ok(res) => assert!(res.contains("Duplicated")),
+                    Err(e) => panic!("[TEST::DBIO_PLACE] Error: {}", e)
+                }
+                
+                client.execute("DELETE FROM tablet", &[]).unwrap();
+                client.execute("DELETE FROM items", &[]).unwrap();
+                client.execute("DELETE FROM item_history", &[]).unwrap();
+            },
+            Err(e) => panic!("[TEST::DBIO_PLACE] Should not panic: {}", e)
+        };
+    }
+
+    #[test]
+    fn test_dbio_place_given_previous_row_exists_and_table_status_close_when_place_result_contains_new_string_literal() {
+        let dbio:Dbio = Dbio::new();
+        let mut client: Client = Client::connect(dbio.get_db_path(), NoTls).unwrap();
+        match dbio.init() {
+            Ok(()) => {
+                client.execute("DELETE FROM tablet", &[]).unwrap();
+                client.execute("DELETE FROM items", &[]).unwrap();
+                client.execute("DELETE FROM item_history", &[]).unwrap();
+
+                let opened_at: String = Utc::now().to_string();
+                client.execute("INSERT INTO tablet(opened_at, table_id, status) VALUES(to_timestamp($1, 'YYYY-MM-DD HH24:MI:SS'), '1', $2)", &[&opened_at, &TableStatus::Close]).unwrap();
+                client.execute("INSERT INTO items(created_at, updated_at, table_id, item, amount, status) VALUES(to_timestamp($1, 'YYYY-MM-DD HH24:MI:SS'), to_timestamp($1, 'YYYY-MM-DD HH24:MI:SS'), '1', 'A', 2, $2)", &[&opened_at, &ItemStatus::Done]).unwrap();
+                client.execute("INSERT INTO item_history(created_at, updated_at, table_id, item, amount, status) VALUES(to_timestamp($1, 'YYYY-MM-DD HH24:MI:SS'), to_timestamp($1, 'YYYY-MM-DD HH24:MI:SS'), '1', 'A', 2, $2)", &[&opened_at, &ItemStatus::Done]).unwrap();
+            
+                let order: PlaceOrder = PlaceOrder {
+                    created_at: Utc::now(),
+                    table_id: "1".to_string(),
+                    items: vec![ItemPair{name: "B".to_string(), amount: 8}]
+                };
+
+                match dbio.place(order) {
+                    Ok(res) => assert!(res.contains("New")),
+                    Err(e) => panic!("[TEST::DBIO_PLACE] Error: {}", e)
+                }
+            
+                client.execute("DELETE FROM tablet", &[]).unwrap();
+                client.execute("DELETE FROM items", &[]).unwrap();
+                client.execute("DELETE FROM item_history", &[]).unwrap();
+            },
+            Err(e) => panic!("[TEST::DBIO_PLACE] Should not panic: {}", e)
+        };
+    }
+    
 }

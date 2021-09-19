@@ -1,6 +1,6 @@
 [client]
 base_url = "http://127.0.0.1:8080"
-timeout = 3 # secs
+timeout = 100 # secs
 
 [api]
 place_order = "/api/place/order"

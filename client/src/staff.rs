@@ -38,7 +38,7 @@ impl Tablet for Staff {
         loop {
             // random number generator
             let mut rng = rand::thread_rng();
-            let duration = rng.gen_range(1..2);
+            let duration = rng.gen_range(10..21);
             let req_type = rng.gen_range(0..5);
 
             match ReqType::try_from(req_type) {
@@ -263,12 +263,6 @@ fn generate_items() -> Vec<ItemPair> {
         });
     }
     items
-}
-
-fn timestamp() -> i64 {
-    let timespec = time::get_time();
-    let mills: i64 = (timespec.sec as i64 * 1000) + (timespec.nsec as i64 / 1000 / 1000);
-    mills
 }
 
 #[cfg(test)]
