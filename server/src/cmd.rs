@@ -2,7 +2,6 @@ use crate::db::DB;
 use crate::order_type::{DeleteOrder, ItemPair, ItemStatus, PlaceOrder, TableStatus, UpdateOrder};
 use crate::settings::Settings;
 use chrono::{DateTime, Utc};
-use futures::executor::block_on;
 use postgres::{Client, Error, NoTls};
 use rand::Rng;
 use std::thread;
@@ -324,31 +323,21 @@ impl DB for Dbio {
 
         Ok(res.into())
     }
-    /*
-        fn check_table_status(&self) -> Result<bool, Error> {
-            let mut client = Client::connect(self.get_db_path(), NoTls).unwrap();
-            let mut is_empty: bool = true;
+    
+    fn check_table_status(&self) -> Result<bool, Error> {
+        let mut client = Client::connect(self.get_db_path(), NoTls).unwrap();
+        let mut is_empty: bool = true;
 
-            for row in client.query("SELECT * FROM tablet WHERE table_status NOT IN ('done')", &[])? {
-                is_empty = false;
-                let table_id: String = row.get("table_id");
-                let table_status: String = row.get("table_status");
-                if table_status.eq("todo") {
-                    println!("[CHECK_TABLE_STATUS] table_id: {} is still waiting, status: {}", table_id, table_status);
-                } else {
-                    println!("[CHECK_TABLE_STATUS] table_id: {} is still cooking, status: {}", table_id, table_status);
-                }
-            }
-
-            Ok(is_empty)
+        for row in client.query("SELECT * FROM tablet WHERE status = $1 FOR UPDATE", &[&TableStatus::Open])? {
+            is_empty = false;
+            let table_id: String = row.get("table_id");
+            let status: TableStatus = row.get("status");
+            println!("[CHECK_TABLE_STATUS] table_id: {} is still being served, status: {}", table_id, status);
         }
-    */
-}
 
-fn timestamp() -> i64 {
-    let timespec = time::get_time();
-    let mills: i64 = (timespec.sec as i64 * 1000) + (timespec.nsec as i64 / 1000 / 1000);
-    mills
+        Ok(is_empty)
+    }
+    
 }
 
 fn update_table_status(mut client: Client, table_id: String, ts: String) -> Result<(), Error> {
@@ -542,89 +531,70 @@ mod test {
             Err(e) => panic!("[TEST::DBIO_INIT] Should not panic: {}", e),
         };
     }
-    /*
+    
+    #[test]
+    fn test_dbio_check_table_status_given_no_rows_in_tablet_when_checked_then_true_returned() {
+        let dbio:Dbio = Dbio::new();
+        let mut client: Client = Client::connect(dbio.get_db_path(), NoTls).unwrap();
+        match dbio.init() {
+            Ok(()) => {
+                client.execute("DELETE FROM tablet", &[]).unwrap();
+                client.execute("DELETE FROM items", &[]).unwrap();
+                client.execute("DELETE FROM item_history", &[]).unwrap();
+                match dbio.check_table_status() {
+                    Ok(val) => assert_eq!(true, val),
+                    Err(e) => panic!("[TEST::DBIO_CHECK_TABLE_STATUS] Error: {}", e)
+                }
+            },
+            Err(e) => panic!("[TEST::DBIO_CHECK_TABLE_STATUS] Should not panic: {}", e)
+        };
+    }
             #[test]
-            fn test_dbio_check_table_status_given_no_rows_in_tablet_when_checked_then_true_returned() {
-                let dbio:Dbio = Dbio::new();
-                let mut client: Client = Client::connect(dbio.get_db_path(), NoTls).unwrap();
-                match dbio.init() {
-                    Ok(()) => {
-                        // Clean both tablet/items tables
-                        client.execute("DELETE FROM tablet", &[]).unwrap();
-                        client.execute("DELETE FROM items", &[]).unwrap();
-                        match dbio.check_table_status() {
-                            Ok(val) => assert_eq!(true, val),
-                            Err(e) => panic!("[TEST::DBIO_CHECK_TABLE_STATUS] Error: {}", e)
-                        }
-                    },
-                    Err(e) => panic!("[TEST::DBIO_CHECK_TABLE_STATUS] Should not panic: {}", e)
-                };
-            }
+    fn test_dbio_check_table_status_given_all_table_statuses_are_close_when_checked_then_true_returned() {
+        let dbio:Dbio = Dbio::new();
+        let mut client: Client = Client::connect(dbio.get_db_path(), NoTls).unwrap();
+        match dbio.init() {
+            Ok(()) => {
+                let opened_at: DateTime<Utc> = Utc::now();
+                client.execute("DELETE FROM tablet", &[]).unwrap();
+                client.execute("DELETE FROM items", &[]).unwrap();
+                client.execute("DELETE FROM item_history", &[]).unwrap();
+                client.execute("INSERT INTO tablet(opened_at, table_id, status) VALUES($1, '1', $2)", &[&opened_at, &TableStatus::Close]).unwrap();
+                match dbio.check_table_status() {
+                    Ok(val) => assert_eq!(true, val),
+                    Err(e) => panic!("[TEST::DBIO_CHECK_TABLE_STATUS] Error: {}", e)
+                }
+                client.execute("DELETE FROM tablet", &[]).unwrap();
+            },
+            Err(e) => panic!("[TEST::DBIO_CHECK_TABLE_STATUS] Should not panic: {}", e)
+        };
+    }
 
-            #[test]
-            fn test_dbio_check_table_status_given_all_table_status_of_tablet_rows_is_done_when_checked_then_true_returned() {
-                let dbio:Dbio = Dbio::new();
-                let mut client: Client = Client::connect(dbio.get_db_path(), NoTls).unwrap();
-                match dbio.init() {
-                    Ok(()) => {
-                        // Clean both tablet/items tables
-                        client.execute("DELETE FROM tablet", &[]).unwrap();
-                        client.execute("DELETE FROM items", &[]).unwrap();
-                        client.execute("INSERT INTO tablet(timestamp, table_id, table_status) VALUES(1234567890123, '1', 'done')", &[]).unwrap();
-                        match dbio.check_table_status() {
-                            Ok(val) => assert_eq!(true, val),
-                            Err(e) => panic!("[TEST::DBIO_CHECK_TABLE_STATUS] Error: {}", e)
-                        }
-                        client.execute("DELETE FROM tablet", &[]).unwrap();
-                    },
-                    Err(e) => panic!("[TEST::DBIO_CHECK_TABLE_STATUS] Should not panic: {}", e)
-                };
-            }
-
-            #[test]
-            fn test_dbio_check_table_status_given_certain_table_status_of_tablet_rows_is_todo_when_checked_then_false_returned() {
-                let dbio:Dbio = Dbio::new();
-                let mut client: Client = Client::connect(dbio.get_db_path(), NoTls).unwrap();
-                match dbio.init() {
-                    Ok(()) => {
-                        // Clean both tablet/items tables
-                        client.execute("DELETE FROM tablet", &[]).unwrap();
-                        client.execute("DELETE FROM items", &[]).unwrap();
-                        match client.execute("INSERT INTO tablet(timestamp, table_id, table_status) VALUES(1234567890123, '1', 'todo')", &[]) {
-                            Ok(_) => {
-                                match dbio.check_table_status() {
-                                    Ok(val) => assert_eq!(false, val),
-                                    Err(e) => panic!("[TEST::DBIO_CHECK_TABLE_STATUS] Error: {}", e)
-                                }
-                            },
-                            Err(e) => panic!("[TEST::DBIO_CHECK_TABLE_STATUS] Error: {}", e)
-                        }
-                        client.execute("DELETE FROM tablet", &[]).unwrap();
-                    },
-                    Err(e) => panic!("[TEST::DBIO_CHECK_TABLE_STATUS] Should not panic: {}", e)
-                };
-            }
-
-            #[test]
-            fn test_dbio_check_table_status_given_certain_table_status_of_tablet_rows_is_doing_when_checked_then_false_returned() {
-                let dbio:Dbio = Dbio::new();
-                let mut client: Client = Client::connect(dbio.get_db_path(), NoTls).unwrap();
-                match dbio.init() {
-                    Ok(()) => {
-                        // Clean both tablet/items tables
-                        client.execute("DELETE FROM tablet", &[]).unwrap();
-                        client.execute("DELETE FROM items", &[]).unwrap();
-                        client.execute("INSERT INTO tablet(timestamp, table_id, table_status) VALUES(1234567890123, '1', 'doing')", &[]).unwrap();
+    #[test]
+    fn test_dbio_check_table_status_given_certain_table_statuses_are_open_when_checked_then_false_returned() {
+        let dbio:Dbio = Dbio::new();
+        let mut client: Client = Client::connect(dbio.get_db_path(), NoTls).unwrap();
+        match dbio.init() {
+            Ok(()) => {
+                let opened_at: DateTime<Utc> = Utc::now();
+                client.execute("DELETE FROM tablet", &[]).unwrap();
+                client.execute("DELETE FROM items", &[]).unwrap();
+                client.execute("DELETE FROM item_history", &[]).unwrap();
+                match client.execute("INSERT INTO tablet(opened_at, table_id, status) VALUES($1, '1', 'Open')", &[&opened_at]) {
+                    Ok(_) => {
                         match dbio.check_table_status() {
                             Ok(val) => assert_eq!(false, val),
                             Err(e) => panic!("[TEST::DBIO_CHECK_TABLE_STATUS] Error: {}", e)
                         }
-                        client.execute("DELETE FROM tablet", &[]).unwrap();
                     },
-                    Err(e) => panic!("[TEST::DBIO_CHECK_TABLE_STATUS] Should not panic: {}", e)
-                };
-            }
-    */
+                    Err(e) => panic!("[TEST::DBIO_CHECK_TABLE_STATUS] Error: {}", e)
+                }
+                client.execute("DELETE FROM tablet", &[]).unwrap();
+            },
+            Err(e) => panic!("[TEST::DBIO_CHECK_TABLE_STATUS] Should not panic: {}", e)
+        };
+    }
+
     #[test]
     fn test_dbio_update_table_status_given_no_items_left_when_executed_then_tablestatus_gets_close()
     {
@@ -675,15 +645,15 @@ mod test {
                 client.execute("DELETE FROM tablet", &[]).unwrap();
                 client.execute("DELETE FROM items", &[]).unwrap();
                 client.execute("DELETE FROM item_history", &[]).unwrap();
-                client.execute("INSERT INTO tablet(opened_at, table_id, status) VALUES(to_timestamp($1, 'YYYY-MM-DD HH24:MI:SS'), '1', 'Open'::tablestatus)", &[&opened_at.to_string()]).unwrap();
-                client.execute("INSERT into items(created_at, updated_at, table_id, item, amount, status) VALUES(to_timestamp($1, 'yyyy-mm-dd hh24:mi:ss'), to_timestamp($1, 'yyyy-mm-dd hh24:mi:ss'), '1', 'A', 1, 'Done'::itemstatus)", &[&opened_at.to_string()]).unwrap();
-                client.execute("INSERT into items(created_at, updated_at, table_id, item, amount, status) VALUES(to_timestamp($1, 'yyyy-mm-dd hh24:mi:ss'), to_timestamp($1, 'yyyy-mm-dd hh24:mi:ss'), '1', 'B', 1, 'Done'::itemstatus)", &[&opened_at.to_string()]).unwrap();
+                client.execute("INSERT INTO tablet(opened_at, table_id, status) VALUES($1, '1', 'Open'::tablestatus)", &[&opened_at]).unwrap();
+                client.execute("INSERT into items(created_at, updated_at, table_id, item, amount, status) VALUES($1, $1, '1', 'A', 1, 'Done'::itemstatus)", &[&opened_at]).unwrap();
+                client.execute("INSERT into items(created_at, updated_at, table_id, item, amount, status) VALUES($1, $1, '1', 'B', 1, 'Done'::itemstatus)", &[&opened_at]).unwrap();
                 match update_table_status(client, "1".to_string(), opened_at.to_string()) {
                     Ok(()) => {
                         let mut cli: Client = Client::connect(dbio.get_db_path(), NoTls).unwrap();
                         match cli.query_one("SELECT opened_at, closed_at, table_id, status
                                              FROM tablet
-                                             WHERE table_id = '1' AND opened_at = to_timestamp($1, 'YYYY-MM-DD HH24:MI:SS')", &[&opened_at.to_string()]) {
+                                             WHERE table_id = '1' AND opened_at = $1", &[&opened_at]) {
                             Ok(row) => {
                                 let closed_at: DateTime<Utc> = row.get(1);
                                 let status: TableStatus = row.get(3);

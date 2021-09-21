@@ -62,7 +62,7 @@ async fn main() -> tide::Result<()> {
         }
     };
 
-    //ctrlc::set_handler(error_handler).expect("Error setting Ctrl-C handler");
+    ctrlc::set_handler(error_handler).expect("Error setting Ctrl-C handler");
     tide::log::start();
 
     /* simple api processing here */
@@ -84,7 +84,6 @@ async fn main() -> tide::Result<()> {
     Ok(())
 }
 
-/*
 fn error_handler() {
     println!("[TERMINATION] Received signal to terminate the server!");
     /* Waiting incomplete requests to be done */
@@ -110,7 +109,7 @@ fn error_handler() {
     println!("[TERMINATION] Fully served! Server terminated.");
     process::exit(0);
 }
-*/
+
 fn is_auth(req: &tide::Request<()>) -> bool {
     (match req.header("X-Auth-Username") {
         Some(name) => {
