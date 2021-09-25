@@ -7,7 +7,7 @@ The project is developed for the [interview problem](https://github.com/paidy/in
 | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----: | :--------------: | :-------------------------------: |
 | Show all items for a specified table number                                                                                                                                          |  GET   |        N         |    /api/status/order/:table_id    |
 | Show a specified item for a specified table number                                                                                                                                   |  GET   |        N         | /api/status/order/:table_id/:item |
-| Create a request: store item, table number and cooking period                                                                                                                        |  POST  |        Y         |         /api/place/order          |
+| Create a request: ask the back house to prepare items for a specified table                                                                                                          |  POST  |        Y         |         /api/place/order          |
 | Delete a request: remove a specified item for a specified table number                                                                                                               | DELETE |        Y         |         /api/delete/order         |
 | Update a request: for a created request not fully served, a staff is able to update amounts of specified items and add new items on the same order, but served items are not updated | PATCH  |        Y         |         /api/update/order         |
 
@@ -26,7 +26,7 @@ The project is developed for the [interview problem](https://github.com/paidy/in
     ```toml
     [client]
     base_url = "http://127.0.0.1:8080"
-    timeout = 3 # secs
+    timeout = 100 # secs
     
     [api]
     place_order = "/api/place/order"
@@ -76,7 +76,7 @@ Usually, you can test on your own by [curl](https://linux.die.net/man/1/curl) co
     JSON Request Format:
     ```json
     {
-    	"timestamp": 1234567890123,
+    	"created_at": "2018-12-10T13:49:51.141456Z",
     	"table_id":"4",
     	"items": [
     		{"name":"A", "amount":1},
@@ -90,7 +90,7 @@ Usually, you can test on your own by [curl](https://linux.die.net/man/1/curl) co
     
     ```json
     {
-        \"timestamp\":1234567890123,
+        \"created_at\":\"2018-12-10T13:49:51.141456Z\",
         \"table_id\":\"4\",
         \"items\": [
             {\"name\":\"A\", \"amount\":1}, 
@@ -108,7 +108,7 @@ Usually, you can test on your own by [curl](https://linux.die.net/man/1/curl) co
     JSON Request Format:
     ```json
     {
-        "timestamp": 1234567890123,
+        "deleted_at": "2018-12-10T13:49:51.5000000Z",
         "table_id": "4",
         "item": "A"
     }
@@ -118,7 +118,7 @@ Usually, you can test on your own by [curl](https://linux.die.net/man/1/curl) co
     Besides that, if you are testing on Windows platforms, slashes ```\``` might be added to skip quotes ```"```.
     ```json
     {
-        \"timestamp\": 1234567890123,
+        \"deleted_at\": \"2018-12-10T13:49:51.5000000Z\",
         \"table_id\": \"4\", 
         \"item\": \"A\"
     }
@@ -131,7 +131,7 @@ Usually, you can test on your own by [curl](https://linux.die.net/man/1/curl) co
     JSON Request Format:
     ```json
     {
-        "timestamp": 1234567890123,
+        "updated_at":"2018-12-10T13:49:52.141000Z",
         "table_id": "4",
         "items": [
             { "name": "A", "amount": 8 },
@@ -145,7 +145,7 @@ Usually, you can test on your own by [curl](https://linux.die.net/man/1/curl) co
     
     ```json
     {
-        \"timestamp\":1234567890123,
+        \"timestamp\":\"2018-12-10T13:49:52.141000Z\",
         \"table_id\":\"4\",
         \"items\": [
             {\"name\":\"A\", \"amount\":8},
@@ -153,48 +153,65 @@ Usually, you can test on your own by [curl](https://linux.die.net/man/1/curl) co
         ]
     }
     ```
-    For example, if you'd like to update the amount of an item that is in **neither ```done``` nor ```doing```** state. The order would be rejected if the specified item is not in **```todo```** state. You can only wait for the table status to be done; relaucn a new order.
+    Note that an item can only be updated when it is still in ```New``` state or it hasn't been ordered yet. Otherwise, you can only wait for the table status to be ```Close```; re-launch a new order.
+
 ## Order Rules
 Considering COVID-19 situation, we have proposed some revised rules for customers to order to avoid consumption of redundant food. 
 
 1. If a table is fully served, a staff could help customers place a new order with both table id and specified items/amounts.
-2. If you'd like to delete a certain item on your order, please tell our staffs for assistance. However, for items that have been ```doing``` or ```done```. We would not serve the requests.
+2. If you'd like to delete a certain item on your order, please tell our staffs for assistance. However, for item whose status is either in ```Process``` or ```Done```, we would not serve the requests.
 3. To check all items' preparation status of your table, ask our staffs to do it for you.
 4. To check a certain item's status of your table, ask our staffs to do it for you.
 5. To update your original order, we only allow 
     
-    [1] items still in ```todo``` state 
+    [1] items still in ```New``` state 
     
     [2] new items haven't been requested
     
-    to be updated on the order waiting for service.
+    to be updated on the order that is waiting for service.
 ## DB Schema Design
 ![db diagram](./imgs/db_diagram.png)
 
-In realistic scenarios, there is a one-to-many mapping between each table and ordered items since each table might contain many items. As a result, I associate both by field ```table_id```. Detailed description of fields is indicated as follows:
+In realistic scenarios, there is a one-to-many mapping between each table and ordered items since each table might contain many items. As a result, I associated both by field ```table_id```. Detailed description of fields is indicated as follows:
 
-| tablet field | timestamp              | table_id      | table_status                                                                      |
-| :----------: | :--------------------- | :------------ | :-------------------------------------------------------------------------------- |
-| description  | The ordered time (UTC) | id of a table | serving status of a table, usually in ```todo```, ```doing``` or ```done``` state |
+For the table ```tablet```, it contains 4 fields ```opened_at```, ```closed_at```, ```table_id``` and ```status```.
 
-| items field | timestamp              | table_id      | item                                             | amount            | item_status                                                                       |
-| :---------: | :--------------------- | :------------ | :----------------------------------------------- | :---------------- | :-------------------------------------------------------------------------------- |
-| description | The ordered time (UTC) | id of a table | item name, limited to upper-case alphabet (A..Z) | amount of an item | serving status of an item, usually in ```todo```, ```doing``` or ```done``` state |
+| tablet field | opened_at                         | closed_at                       | table_id      | tablestatus                                                           |
+| :----------: | :-------------------------------- | :------------------------------ | :------------ | :-------------------------------------------------------------------- |
+|  data type   | timestamptz                       | timestamptz                     | varchar       | tablestatus (enum)                                                    |
+| description  | The start time of the table (UTC) | The end time of the table (UTC) | id of a table | serving status of a table, usually in ```Open``` or ```Close``` state |
 
-Let's compare some terms associative with order results you would see in the db schema.
+For the table ```items```, it contains fields ```created_at```, ```updated_at```, ```table_id```, ```item```, ```amount```, and ```status```
 
-|         -          | ```todo```                                    | ```doing```                                   | ```done```           |
-| :----------------: | :-------------------------------------------- | :-------------------------------------------- | :------------------- |
-| ```item_status```  | waiting to be served                          | being served                                  | served               |
-| ```table_status``` | all items of a table are waiting to be served | one or more items of a table are being served | all items are served |
+| items field | created_at                                                                                               | updated_at                     | table_id      | item                                             | amount            | status                                                                                            |
+| :---------: | :------------------------------------------------------------------------------------------------------- | :----------------------------- | :------------ | :----------------------------------------------- | :---------------- | :------------------------------------------------------------------------------------------------ |
+|  data type  | timestamptz                                                                                              | timestamptz                    | varchar       | varchar                                          | int               | itemstatus (enum)                                                                                 |
+| description | The created time of the order, usually the same as the field ```opened_at``` of table ```tablet``` (UTC) | updated time of the item (UTC) | id of a table | item name, limited to upper-case alphabet (A..Z) | amount of an item | serving status of an item, usually in ```New```, ```Process```, ```Done``` or ```Deleted``` state |
+
+For the table ```item_history```, basically it is identical to the table ```items```. The main difference is that the table ```item_history``` would record items' updated history while the table ```items``` owns the latest statuses of items of a table.  
+
+To identify the cuurent table status and the preparation progress of items, I created both enum types ```tablestatus``` and ```itemstatus```.
+
+For the former, the detail status description is as follows:
+
+|         -         | ```Open```                | ```Close```               |
+| :---------------: | :------------------------ | :------------------------ |
+| ```tablestatus``` | The table is being served | The table is fully served |
+
+For the latter, the detail status description is as follows:
+
+|        -         | ```New```                            | ```Process```               | ```Done```         | ```Deleted```       |
+| :--------------: | :----------------------------------- | :-------------------------- | :----------------- | :------------------ |
+| ```itemstatus``` | The item is placed but not processed | The item is being processed | The item is served | The item is deleted |
+
 ## Unit Tests
-In the project, there are many unit tests regarding to db access operations. In order to prevent interference from each other because of parallelism of test runner, which means it would concurrently launch thread per unit-test at the same time. Therefore, please follow the instruction below to validate correctness of function units.
+In the project, there are many unit tests regarding to db access operations. In order to prevent interference from each other because of parallelism of test runner, which means it would concurrently launch a thread per unit-test at the same time. Therefore, please follow the instruction below to validate correctness of function units.
 
 ```cmd
 cargo test -- --test-threads=1
 ```
 
-In order to avoid unexpected results caused by concurrent access from different threads of unit-test cases, only 1 thread is adopted to run test cases sequentially. The result should be as below:
+In order to avoid unexpected results caused by concurrent accesses from different threads of unit-test cases, only 1 thread is adopted to run test cases sequentially. The result should be as below:
 
 ![unit test result](./imgs/unit_test_result.png)
 
