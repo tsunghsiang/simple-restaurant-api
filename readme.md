@@ -145,7 +145,7 @@ Usually, you can test on your own by [curl](https://linux.die.net/man/1/curl) co
     
     ```json
     {
-        \"timestamp\":\"2018-12-10T13:49:52.141000Z\",
+        \"updated_at\":\"2018-12-10T13:49:52.141000Z\",
         \"table_id\":\"4\",
         \"items\": [
             {\"name\":\"A\", \"amount\":8},
